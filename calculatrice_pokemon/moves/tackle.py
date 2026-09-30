@@ -19,6 +19,7 @@ class Tackle(Moves):
             category=MoveCategory.PHYSICAL,
             power=40,
             accuracy=100,
+            max_pp=35,
         )
 
     def effect(self, user, target):

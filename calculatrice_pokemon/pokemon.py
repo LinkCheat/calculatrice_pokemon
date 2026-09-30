@@ -7,10 +7,13 @@ from enums.nature import Nature
 
 
 class Pokemon:
-    def __init__(self, name):
-        data = self.find_by_name(name)
+    MAX_MOVES = 4
+
+    def __init__(self, name, form=None):
+        data = self.find_by_name(name, form)
 
         self.name = data["name"]
+        self.form = data["form"]
         self.type = data["type"]
         self.base_stats = data["stats"]
         self.weight = data["weight"]
@@ -63,6 +66,13 @@ class Pokemon:
 
         self.calculateStats()
 
+    def add_move(self, move):
+        if len(self.moves) >= self.MAX_MOVES:
+            raise ValueError(f"Un Pokémon ne peut pas avoir plus de {self.MAX_MOVES} attaques.")
+
+        move.pp = move.max_pp
+        self.moves.append(move)
+
 
     @staticmethod
     def _parse_type(type_name):
@@ -76,36 +86,65 @@ class Pokemon:
         raise ValueError(f"Type inconnu : {type_name}")
 
     @staticmethod
-    def find_by_name(name):
+    def _normalize_text(value):
+        if value is None:
+            return ""
+        value = str(value).strip().lower()
+        value = value.replace("-", " ")
+        value = value.replace("_", " ")
+        return value
+
+    @staticmethod
+    def find_by_name(name, form=None):
         csv_path = Path(__file__).resolve().parent / "database" / "Pokemon.csv"
+        requested_form = (form or "").strip()
 
         with open(csv_path, newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
 
             for row in reader:
-                if row["Name"].strip().lower() == name.strip().lower():
-                    types = [Pokemon._parse_type(row["Type1"])]
-                    if row["Type2"].strip():
-                        types.append(Pokemon._parse_type(row["Type2"]))
+                row_name = row["Name"].strip()
+                row_form = (row["Form"] or "").strip()
 
-                    stats = {
-                        "total": int(row["Total"]),
-                        "hp": int(row["HP"]),
-                        "attack": int(row["Attack"]),
-                        "defense": int(row["Defense"]),
-                        "sp_atk": int(row["Sp. Atk"]),
-                        "sp_def": int(row["Sp. Def"]),
-                        "speed": int(row["Speed"]),
-                    }
+                if Pokemon._normalize_text(row_name) != Pokemon._normalize_text(name):
+                    continue
 
-                    return {
-                        "name": row["Name"],
-                        "type": types,
-                        "stats": stats,
-                        "weight": float(row["Weight"]),
-                    }
+                if requested_form == "":
+                    if row_form == "":
+                        return Pokemon._build_pokemon_data(row)
+                elif Pokemon._normalize_text(row_form) == Pokemon._normalize_text(requested_form):
+                    return Pokemon._build_pokemon_data(row)
+
+        if requested_form:
+            raise ValueError(
+                f"Forme '{requested_form}' introuvable pour le Pokémon '{name}' dans la base de données."
+            )
 
         raise ValueError(f"Pokémon '{name}' introuvable dans la base de données.")
+
+    @staticmethod
+    def _build_pokemon_data(row):
+        types = [Pokemon._parse_type(row["Type1"])]
+        if row["Type2"].strip():
+            types.append(Pokemon._parse_type(row["Type2"]))
+
+        stats = {
+            "total": int(row["Total"]),
+            "hp": int(row["HP"]),
+            "attack": int(row["Attack"]),
+            "defense": int(row["Defense"]),
+            "sp_atk": int(row["Sp. Atk"]),
+            "sp_def": int(row["Sp. Def"]),
+            "speed": int(row["Speed"]),
+        }
+
+        return {
+            "name": row["Name"],
+            "form": row["Form"].strip(),
+            "type": types,
+            "stats": stats,
+            "weight": float(row["Weight"]),
+        }
         
     def _nature_multiplier(self, stat_name):
         nature_multipliers = {
