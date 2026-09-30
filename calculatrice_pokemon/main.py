@@ -1,4 +1,5 @@
 from enums.nature import Nature
+from enums.type import Type
 
 try:
     from moves import Tackle
@@ -93,8 +94,12 @@ print(f"L'attaque est bien une instance de Moves : {isinstance(attack, move.Move
 player_action_index = input_player_action(battle_field)
 attack_order = battle_field.determine_attack_order(player_action_index, 0)
 for action in attack_order:
-    if action["type"] == "switch":
+    if action["type"] == "switch": 
         battle_field.switch_pokemon(action["side"], action["team_index"])
         print(f"{action['side']} switch vers {action['pokemon'].name}")
     else:
         print(f"{action['side']} joue {action['move'].name}")
+
+fire_vs_grass = field.Field.calculate_type_effectiveness(Type.FIRE, Type.GRASS)
+assert fire_vs_grass == 2.0
+print(f"Test de type : Feu contre Plante = x{fire_vs_grass} (attendu : x2)")

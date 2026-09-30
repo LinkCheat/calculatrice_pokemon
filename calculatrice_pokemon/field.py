@@ -2,6 +2,8 @@ import random
 
 from enums.weather import Weather
 from enums.terrain import Terrain
+from enums.type import Type
+from enums.type_chart import TypeChart
 
 
 class Field:
@@ -147,3 +149,12 @@ class Field:
 
         second_side = "opponent" if first_side == "player" else "player"
         return [actions[first_side], actions[second_side]]
+
+    def calculate_type_effectiveness(attack_type: Type, defending_type: Type) -> float:
+        if attack_type is Type.NONE:
+            raise ValueError("Le type d'une attaque ne peut pas être Type.NONE.")
+        if not isinstance(defending_type, Type):
+            raise ValueError("defending_type doit être une valeur de Type.")
+        if defending_type is Type.NONE:
+            return 1.0
+        return TypeChart[attack_type.name].value.get(defending_type, 1.0)
