@@ -37,11 +37,20 @@ class Moves(ABC):
 
     def use(self, user, target):
         """Méthode générique pour utiliser l'attaque."""
+        self.consume_pp()
+        return self.effect(user, target)
+
+    def consume_pp(self):
         if self.pp <= 0:
             raise ValueError(f"{self.name} n'a plus de PP et ne peut pas être utilisée.")
 
         self.pp -= 1
-        return self.effect(user, target)
+
+    def get_power(self, user, target):
+        return self.power
+
+    def calculate_damage(self, user, target, standard_damage):
+        return standard_damage
 
     def __str__(self):
         return f"{self.name} ({self.type.value})"

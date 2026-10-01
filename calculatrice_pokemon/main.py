@@ -61,7 +61,7 @@ def input_player_action(battle_field):
 battle_field = field.Field()
 player_pokemon = pokemon.Pokemon("Charizard", "Mega Charizard X")
 player_bench_pokemon = pokemon.Pokemon("Pikachu")
-opponent_pokemon = pokemon.Pokemon("Charizard")
+opponent_pokemon = pokemon.Pokemon("Greninja")
 battle_field.add_pokemon(player_pokemon, "player")
 battle_field.add_pokemon(player_bench_pokemon, "player")
 battle_field.add_pokemon(opponent_pokemon, "opponent")
@@ -73,8 +73,7 @@ player_pokemon.ivs["attack"] = 0
 opponent_pokemon.evs["speed"] = 252
 player_pokemon.stat_modifiers["attack"] = 2
 
-player_pokemon.calculateStats()
-opponent_pokemon.calculateStats()
+battle_field.initialize_battle()
 
 
 print(f"Player's Pokemon: {player_pokemon.name}, Type: {player_pokemon.type}, Stats: {player_pokemon.stats}")
@@ -98,7 +97,23 @@ for action in attack_order:
         battle_field.switch_pokemon(action["side"], action["team_index"])
         print(f"{action['side']} switch vers {action['pokemon'].name}")
     else:
-        print(f"{action['side']} joue {action['move'].name}")
+        result = battle_field.resolve_move(action["side"], action["move"])
+        target_side = "opponent" if action["side"] == "player" else "player"
+        target_pokemon = (
+            battle_field.opponent_active_pokemon
+            if target_side == "opponent"
+            else battle_field.player_active_pokemon
+        )
+        if not result["hit"]:
+            print(f"{action['pokemon'].name} rate {action['move'].name}.")
+        elif result["immune"]:
+            print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
+        else:
+            print(
+                f"{action['pokemon'].name} utilise {action['move'].name} "
+                f"et inflige {result['damage']} dégâts. "
+                f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
+            )
 
 fire_vs_grass = field.Field.calculate_type_effectiveness(Type.FIRE, Type.GRASS)
 assert fire_vs_grass == 2.0

@@ -65,6 +65,11 @@ class Pokemon:
         self.teracristal_active = False  # Par défaut, le Teracristal n'est pas actif
 
         self.calculateStats()
+        self.current_hp = self.max_hp
+
+    @property
+    def max_hp(self):
+        return self.stats["hp"]
 
     def add_move(self, move):
         if len(self.moves) >= self.MAX_MOVES:

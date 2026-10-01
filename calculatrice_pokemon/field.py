@@ -1,7 +1,9 @@
+import math
 import random
 
 from enums.weather import Weather
 from enums.terrain import Terrain
+from enums.move_category import MoveCategory
 from enums.type import Type
 from enums.type_chart import TypeChart
 
@@ -47,6 +49,11 @@ class Field:
         team.append(pokemon)
         if len(team) == 1:
             self._set_active_index(side, 0)
+
+    def initialize_battle(self):
+        for pokemon in self._player_team + self._opponent_team:
+            pokemon.calculateStats()
+            pokemon.current_hp = pokemon.max_hp
 
     def switch_pokemon(self, side, team_index):
         team = self._get_team(side)
@@ -150,6 +157,93 @@ class Field:
         second_side = "opponent" if first_side == "player" else "player"
         return [actions[first_side], actions[second_side]]
 
+    @staticmethod
+    def _stage_multiplier(stage):
+        if stage >= 0:
+            return 1 + stage / 3
+        return 1 / (1 + abs(stage) / 3)
+
+    def attack_hits(self, attacker, defender, move):
+        if move.accuracy >= 101:
+            return True
+
+        accuracy_multiplier = self._stage_multiplier(attacker.stat_modifiers["accuracy"])
+        evasion_multiplier = self._stage_multiplier(defender.stat_modifiers["evasion"])
+        hit_chance = move.accuracy * accuracy_multiplier / evasion_multiplier
+        if hit_chance >= 100:
+            return True
+        return random.random() * 100 < max(0, hit_chance)
+
+    def calculate_move_effectiveness(self, move, defender):
+        effectiveness = 1.0
+        for defending_type in defender.type:
+            effectiveness *= self.calculate_type_effectiveness(move.type, defending_type)
+        return effectiveness
+
+    def is_immune_to_move(self, move, defender):
+        return self.calculate_move_effectiveness(move, defender) == 0
+
+    def calculate_stab_multiplier(self, attacker, move):
+        return 1.5 if move.type in attacker.type else 1.0
+
+    def calculate_damage_modifiers(self, attacker, defender, move):
+        return (
+            self.calculate_move_effectiveness(move, defender)
+            * self.calculate_stab_multiplier(attacker, move)
+        )
+
+    def calculate_damage(self, attacker, defender, move):
+        if move.category is MoveCategory.STATUS:
+            return 0
+
+        if move.category is MoveCategory.PHYSICAL:
+            attack_stat = attacker.stats["attack"]
+            defense_stat = defender.stats["defense"]
+        elif move.category is MoveCategory.SPECIAL:
+            attack_stat = attacker.stats["sp_atk"]
+            defense_stat = defender.stats["sp_def"]
+        else:
+            raise ValueError(f"Catégorie d'attaque inconnue : {move.category}")
+
+        power = move.get_power(attacker, defender)
+        base_damage = math.floor(attacker.level * 0.4 + 2)
+        base_damage = math.floor(base_damage * attack_stat * power / defense_stat)
+        base_damage = math.floor(base_damage / 50) + 2
+
+        modifiers = self.calculate_damage_modifiers(attacker, defender, move)
+        standard_damage = math.floor(base_damage * modifiers)
+        return move.calculate_damage(attacker, defender, standard_damage)
+
+    def resolve_move(self, side, move):
+        attacker = self._get_active_pokemon(side)
+        opponent_side = "opponent" if side == "player" else "player"
+        defender = self._get_active_pokemon(opponent_side)
+        if attacker is None or defender is None:
+            raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        if move.pp <= 0:
+            raise ValueError(f"{move.name} n'a plus de PP et ne peut pas être utilisée.")
+
+        move.consume_pp()
+        if not self.attack_hits(attacker, defender, move):
+            return {"hit": False, "immune": False, "damage": 0, "effect": None}
+
+        effectiveness = self.calculate_move_effectiveness(move, defender)
+        if effectiveness == 0:
+            return {"hit": True, "immune": True, "damage": 0, "effect": None}
+
+        attacker.calculateStats()
+        defender.calculateStats()
+        damage = self.calculate_damage(attacker, defender, move)
+        defender.current_hp = max(0, defender.current_hp - damage)
+        effect = move.effect(attacker, defender)
+        return {
+            "hit": True,
+            "immune": False,
+            "damage": damage,
+            "effect": effect,
+        }
+
+    @staticmethod
     def calculate_type_effectiveness(attack_type: Type, defending_type: Type) -> float:
         if attack_type is Type.NONE:
             raise ValueError("Le type d'une attaque ne peut pas être Type.NONE.")
