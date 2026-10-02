@@ -24,4 +24,5 @@ class Type(Enum):
     STELLAR = "Stellar"
 
     def __repr__(self):
+        """Display the type's human-readable name."""
         return self.value

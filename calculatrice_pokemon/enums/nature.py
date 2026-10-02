@@ -28,4 +28,5 @@ class Nature(Enum):
     CAREFUL = "Careful"
 
     def __repr__(self):
+        """Display the nature's human-readable name."""
         return self.value

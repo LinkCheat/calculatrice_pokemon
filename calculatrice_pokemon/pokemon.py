@@ -10,6 +10,11 @@ class Pokemon:
     MAX_MOVES = 4
 
     def __init__(self, name, form=None):
+        """Load a Pokémon from the CSV database and initialize battle attributes.
+
+        The Pokémon starts at level 50 with default IVs, no EVs, a neutral
+        nature, and full HP.
+        """
         data = self.find_by_name(name, form)
 
         self.name = data["name"]
@@ -69,9 +74,15 @@ class Pokemon:
 
     @property
     def max_hp(self):
+        """Return the current calculated maximum HP stat."""
         return self.stats["hp"]
 
     def add_move(self, move):
+        """Add a move, restoring its PP and enforcing the four-move limit.
+
+        Raises:
+            ValueError: If this Pokémon already has the maximum number of moves.
+        """
         if len(self.moves) >= self.MAX_MOVES:
             raise ValueError(f"Un Pokémon ne peut pas avoir plus de {self.MAX_MOVES} attaques.")
 
@@ -81,6 +92,7 @@ class Pokemon:
 
     @staticmethod
     def _parse_type(type_name):
+        """Map a CSV type name to its enum, treating blank values as Type.NONE."""
         if type_name is None or not type_name.strip():
             return Type.NONE
 
@@ -92,6 +104,7 @@ class Pokemon:
 
     @staticmethod
     def _normalize_text(value):
+        """Normalize names and forms for case-insensitive database matching."""
         if value is None:
             return ""
         value = str(value).strip().lower()
@@ -101,6 +114,13 @@ class Pokemon:
 
     @staticmethod
     def find_by_name(name, form=None):
+        """Find a Pokémon record by name and optional form in Pokemon.csv.
+
+        Returns parsed Pokémon data for the first exact normalized match.
+
+        Raises:
+            ValueError: If the requested Pokémon or form is not in the database.
+        """
         csv_path = Path(__file__).resolve().parent / "database" / "Pokemon.csv"
         requested_form = (form or "").strip()
 
@@ -129,6 +149,7 @@ class Pokemon:
 
     @staticmethod
     def _build_pokemon_data(row):
+        """Convert one CSV row into typed Pokémon data used by the constructor."""
         types = [Pokemon._parse_type(row["Type1"])]
         if row["Type2"].strip():
             types.append(Pokemon._parse_type(row["Type2"]))
@@ -152,6 +173,7 @@ class Pokemon:
         }
         
     def _nature_multiplier(self, stat_name):
+        """Return this Pokémon's nature multiplier for a stat (1.0 if neutral)."""
         nature_multipliers = {
             Nature.HARDY: {"hp": 1.0, "attack": 1.0, "defense": 1.0, "sp_atk": 1.0, "sp_def": 1.0, "speed": 1.0},
             Nature.LONELY: {"hp": 1.0, "attack": 1.1, "defense": 0.9, "sp_atk": 1.0, "sp_def": 1.0, "speed": 1.0},
@@ -181,6 +203,11 @@ class Pokemon:
         return nature_multipliers.get(self.nature, {"hp": 1.0, "attack": 1.0, "defense": 1.0, "sp_atk": 1.0, "sp_def": 1.0, "speed": 1.0}).get(stat_name, 1.0)
 
     def calculateStats(self):
+        """Recalculate HP and battle stats from base stats, IVs, EVs, and level.
+
+        Nature multipliers and current stat stages are applied to non-HP stats.
+        The resulting values replace ``self.stats`` and are also returned.
+        """
         for stat_name in self.base_stats:
             if stat_name == "total":
                 continue
@@ -206,4 +233,5 @@ class Pokemon:
         return self.stats
 
     def calculate_stats(self):
+        """Snake-case alias for ``calculateStats``."""
         return self.calculateStats()

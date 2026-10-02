@@ -13,6 +13,7 @@ except ModuleNotFoundError:
 
 class Tackle(Moves):
     def __init__(self):
+        """Create the Normal-type physical move Tackle (French name: Charge)."""
         super().__init__(
             name="Charge",
             move_type=Type.NORMAL,
@@ -23,6 +24,7 @@ class Tackle(Moves):
         )
 
     def effect(self, user, target):
+        """Return the move's effect metadata for the battle result."""
         return {
             "name": self.name,
             "type": self.type,

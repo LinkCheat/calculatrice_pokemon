@@ -12,4 +12,5 @@ class Weather(Enum):
     DELTA_STREAM = "Delta Stream"
 
     def __repr__(self):
+        """Display the weather's human-readable name."""
         return self.value

@@ -10,4 +10,5 @@ class STATUS_CONDITION(Enum):
     SLEEP = "Sleep"
 
     def __repr__(self):
+        """Display the status condition's human-readable name."""
         return self.value

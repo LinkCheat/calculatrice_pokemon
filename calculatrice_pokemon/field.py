@@ -14,6 +14,7 @@ class Field:
     SWITCH_PRIORITY = 6
 
     def __init__(self):
+        """Create an empty battle field with no active Pokémon or conditions."""
         self._player_team = []
         self._opponent_team = []
         self._player_active_index = None
@@ -26,21 +27,30 @@ class Field:
 
     @property
     def player_team(self):
+        """Return a tuple snapshot of the player's team."""
         return tuple(self._player_team)
 
     @property
     def opponent_team(self):
+        """Return a tuple snapshot of the opponent's team."""
         return tuple(self._opponent_team)
 
     @property
     def player_active_pokemon(self):
+        """Return the player's active Pokémon, or None if the team is empty."""
         return self._get_active_pokemon("player")
 
     @property
     def opponent_active_pokemon(self):
+        """Return the opponent's active Pokémon, or None if the team is empty."""
         return self._get_active_pokemon("opponent")
 
     def add_pokemon(self, pokemon, side):
+        """Add a Pokémon to a side and make it active if it is that side's first.
+
+        Raises:
+            ValueError: If the team already contains the maximum number of Pokémon.
+        """
         team = self._get_team(side)
 
         if len(team) >= self.MAX_TEAM_SIZE:
@@ -51,11 +61,17 @@ class Field:
             self._set_active_index(side, 0)
 
     def initialize_battle(self):
+        """Recalculate every team member's stats and restore each one's HP."""
         for pokemon in self._player_team + self._opponent_team:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
 
     def switch_pokemon(self, side, team_index):
+        """Make a team member active and return it.
+
+        Raises:
+            ValueError: If the index is invalid or selects the already-active Pokémon.
+        """
         team = self._get_team(side)
         if not isinstance(team_index, int) or not 0 <= team_index < len(team):
             raise ValueError("L'index du Pokémon à sélectionner est invalide.")
@@ -66,6 +82,7 @@ class Field:
         return team[team_index]
 
     def _get_team(self, side):
+        """Return the mutable team list for a side; reject unknown side names."""
         if side == "player":
             return self._player_team
         if side == "opponent":
@@ -73,6 +90,7 @@ class Field:
         raise ValueError("side doit être 'player' ou 'opponent'.")
 
     def _get_active_index(self, side):
+        """Return the active team index for a side; reject unknown side names."""
         if side == "player":
             return self._player_active_index
         if side == "opponent":
@@ -80,6 +98,7 @@ class Field:
         raise ValueError("side doit être 'player' ou 'opponent'.")
 
     def _set_active_index(self, side, team_index):
+        """Update a side's active team index; reject unknown side names."""
         if side == "player":
             self._player_active_index = team_index
         elif side == "opponent":
@@ -88,6 +107,7 @@ class Field:
             raise ValueError("side doit être 'player' ou 'opponent'.")
 
     def _get_active_pokemon(self, side):
+        """Look up a side's active Pokémon, returning None if none is selected."""
         team = self._get_team(side)
         active_index = self._get_active_index(side)
         if active_index is None:
@@ -95,6 +115,11 @@ class Field:
         return team[active_index]
 
     def _resolve_action(self, side, action_index):
+        """Convert a player's numeric choice into a validated move or switch action.
+
+        Move choices use indexes 0-3; switch choices encode team indexes starting
+        at 5. The returned dictionary also includes the action's priority.
+        """
         team = self._get_team(side)
         active_pokemon = self._get_active_pokemon(side)
         if active_pokemon is None:
@@ -132,6 +157,11 @@ class Field:
         raise ValueError("L'index d'action doit être entre 0 et 3 pour une attaque, ou entre 5 et 10 pour un switch.")
 
     def determine_attack_order(self, player_action_index, opponent_action_index):
+        """Validate both choices and order actions by priority, speed, then a tie-break.
+
+        Returns the two resolved action dictionaries in execution order. A speed
+        tie is decided randomly.
+        """
         self.player_action_index = player_action_index
         self.opponent_action_index = opponent_action_index
 
@@ -159,11 +189,13 @@ class Field:
 
     @staticmethod
     def _stage_multiplier(stage):
+        """Convert an accuracy or evasion stage into its battle multiplier."""
         if stage >= 0:
             return 1 + stage / 3
         return 1 / (1 + abs(stage) / 3)
 
     def attack_hits(self, attacker, defender, move):
+        """Roll the move's accuracy against the combatants' accuracy stages."""
         if move.accuracy >= 101:
             return True
 
@@ -175,24 +207,33 @@ class Field:
         return random.random() * 100 < max(0, hit_chance)
 
     def calculate_move_effectiveness(self, move, defender):
+        """Multiply type effectiveness across all of the defender's types."""
         effectiveness = 1.0
         for defending_type in defender.type:
             effectiveness *= self.calculate_type_effectiveness(move.type, defending_type)
         return effectiveness
 
     def is_immune_to_move(self, move, defender):
+        """Return whether the move has zero type effectiveness against a defender."""
         return self.calculate_move_effectiveness(move, defender) == 0
 
     def calculate_stab_multiplier(self, attacker, move):
+        """Return the same-type attack bonus multiplier for this attacker and move."""
         return 1.5 if move.type in attacker.type else 1.0
 
     def calculate_damage_modifiers(self, attacker, defender, move):
+        """Combine type effectiveness and STAB into the damage multiplier."""
         return (
             self.calculate_move_effectiveness(move, defender)
             * self.calculate_stab_multiplier(attacker, move)
         )
 
     def calculate_damage(self, attacker, defender, move):
+        """Calculate damage from battle stats, move power, type, and move effects.
+
+        Status moves deal no damage. Physical and special moves use their
+        corresponding attacking and defending stats.
+        """
         if move.category is MoveCategory.STATUS:
             return 0
 
@@ -215,6 +256,12 @@ class Field:
         return move.calculate_damage(attacker, defender, standard_damage)
 
     def resolve_move(self, side, move):
+        """Spend PP, resolve accuracy and immunity, then apply damage and effects.
+
+        Returns a result dictionary with ``hit``, ``immune``, ``damage``, and
+        ``effect`` fields. The move's PP is consumed even when it misses or the
+        target is immune.
+        """
         attacker = self._get_active_pokemon(side)
         opponent_side = "opponent" if side == "player" else "player"
         defender = self._get_active_pokemon(opponent_side)
@@ -245,6 +292,11 @@ class Field:
 
     @staticmethod
     def calculate_type_effectiveness(attack_type: Type, defending_type: Type) -> float:
+        """Return the single-type matchup multiplier, defaulting to neutral.
+
+        Raises:
+            ValueError: If the attacking type is NONE or the defender is not a Type.
+        """
         if attack_type is Type.NONE:
             raise ValueError("Le type d'une attaque ne peut pas être Type.NONE.")
         if not isinstance(defending_type, Type):

@@ -6,4 +6,5 @@ class MoveCategory(Enum):
     STATUS = "Status"
 
     def __repr__(self):
-            return self.value
+        """Display the human-readable category name in representations."""
+        return self.value

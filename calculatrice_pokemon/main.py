@@ -12,6 +12,11 @@ import move
 
 
 def input_player_action(battle_field):
+    """Display available player actions and return a valid selected index.
+
+    Unusable moves and the currently active Pokémon are displayed but cannot be
+    selected. The prompt repeats until the input matches an available action.
+    """
     active_pokemon = battle_field.player_active_pokemon
     valid_indexes = set()
 

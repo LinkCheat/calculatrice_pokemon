@@ -160,4 +160,5 @@ class TypeChart(Enum):
     STELLAR = {}
 
     def __repr__(self):
+        """Display the attacking type name represented by this chart entry."""
         return self.name
