@@ -221,11 +221,54 @@ class Field:
         """Return the same-type attack bonus multiplier for this attacker and move."""
         return 1.5 if move.type in attacker.type else 1.0
 
+    def calculate_critical_hit_multiplier(self, attacker, defender, move):
+        """Roll for a critical hit and return its damage multiplier.
+
+        Critical-hit stage starts at 1 and is adjusted by the attacker's
+        ``critical_hit`` stat modifier. Stages below 1 use the stage-1 chance;
+        stages 4 and above always crit. Critical hits deal 1.5x damage and
+        ignore attack drops and defense boosts for the stat pair used by the
+        move, by reversing those stat-stage multipliers.
+        """
+        critical_stage = max(1, 1 + attacker.stat_modifiers["critical_hit"])
+        if critical_stage == 1:
+            critical_chance = 1 / 24
+        elif critical_stage == 2:
+            critical_chance = 1 / 8
+        elif critical_stage == 3:
+            critical_chance = 1 / 2
+        else:
+            critical_chance = 1.0
+
+        if random.random() >= critical_chance:
+            return 1.0
+
+        if move.category is MoveCategory.PHYSICAL:
+            attack_stat_name = "attack"
+            defense_stat_name = "defense"
+        elif move.category is MoveCategory.SPECIAL:
+            attack_stat_name = "sp_atk"
+            defense_stat_name = "sp_def"
+        else:
+            return 1.0
+
+        multiplier = 1.5
+        attack_stage = attacker.stat_modifiers[attack_stat_name]
+        defense_stage = defender.stat_modifiers[defense_stat_name]
+
+        if attack_stage < 0:
+            multiplier *= 1 + 0.5 * abs(attack_stage)
+        if defense_stage > 0:
+            multiplier *= 1 + 0.5 * defense_stage
+
+        return multiplier
+
     def calculate_damage_modifiers(self, attacker, defender, move):
-        """Combine type effectiveness and STAB into the damage multiplier."""
+        """Combine type effectiveness, STAB, and the critical-hit multiplier."""
         return (
             self.calculate_move_effectiveness(move, defender)
             * self.calculate_stab_multiplier(attacker, move)
+            * self.calculate_critical_hit_multiplier(attacker, defender, move)
         )
 
     def calculate_damage(self, attacker, defender, move):

@@ -17,6 +17,8 @@ class Moves(ABC):
         accuracy: int = 100,
         priority: int = 0,
         max_pp: int = 35,
+
+        contact: bool = False,
     ):
         """Initialize move metadata and set current PP to the maximum PP.
 
@@ -34,6 +36,8 @@ class Moves(ABC):
         self.priority = priority
         self.max_pp = max_pp
         self.pp = max_pp
+
+        self.contact = contact
 
     @abstractmethod
     def effect(self, user, target):

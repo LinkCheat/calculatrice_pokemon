@@ -21,6 +21,7 @@ class Tackle(Moves):
             power=40,
             accuracy=100,
             max_pp=35,
+            contact=True,
         )
 
     def effect(self, user, target):
