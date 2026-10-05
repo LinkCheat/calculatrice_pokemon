@@ -96,28 +96,35 @@ def _display_action_result(battle_field, action, result):
         print(f"{action['pokemon'].name} rate {action['move'].name}.")
     elif result["immune"]:
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
-    elif result["effect"] and "applied" in result["effect"]:
-        effect = result["effect"]
-        if effect["applied"]:
-            sleep_turns = effect["sleep_turns"]
-            duration_label = "tour" if sleep_turns == 1 else "tours"
-            print(
-                f"{target_pokemon.name} s'endort pour "
-                f"{sleep_turns} {duration_label}."
-            )
-        else:
-            print(f"{target_pokemon.name} est déjà affecté par un statut.")
     else:
-        hit_count = result.get("hits", 1)
-        hit_description = f"et touche {hit_count} fois " if hit_count > 1 else ""
-        print(
-            f"{action['pokemon'].name} utilise {action['move'].name} "
-            f"{hit_description}et "
-            f"inflige {result['damage']} dégâts. "
-            f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
-        )
-        if target_pokemon.current_hp == 0:
-            print(f"{target_pokemon.name} est K.O.")
+        effect = result["effect"]
+        if effect and "status" in effect:
+            if effect["applied"]:
+                sleep_turns = effect["sleep_turns"]
+                duration_label = "tour" if sleep_turns == 1 else "tours"
+                print(
+                    f"{target_pokemon.name} s'endort pour "
+                    f"{sleep_turns} {duration_label}."
+                )
+            else:
+                print(f"{target_pokemon.name} est déjà affecté par un statut.")
+        else:
+            hit_count = result.get("hits", 1)
+            hit_description = f"et touche {hit_count} fois " if hit_count > 1 else ""
+            print(
+                f"{action['pokemon'].name} utilise {action['move'].name} "
+                f"{hit_description}et "
+                f"inflige {result['damage']} dégâts. "
+                f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
+            )
+            if target_pokemon.current_hp == 0:
+                print(f"{target_pokemon.name} est K.O.")
+
+            if effect and effect.get("stat") == "attack":
+                if effect["applied"]:
+                    print(f"L'Attaque de {target_pokemon.name} baisse d'un cran.")
+                else:
+                    print(f"L'Attaque de {target_pokemon.name} ne peut pas baisser davantage.")
 
 
 def _announce_winner(battle_field):
@@ -181,9 +188,11 @@ def main():
     print(f"Player's Pokemon: {player_pokemon.name}, Type: {player_pokemon.type}, Stats: {player_pokemon.stats}")
     print(f"Opponent's Pokemon: {opponent_pokemon.name}, Type: {opponent_pokemon.type}, Stats: {opponent_pokemon.stats}")
 
+    #Un pokémon a 4 attaques maximum, on les ajoute ici pour le test
     player_pokemon.add_move(Tackle())
     player_pokemon.add_move(Spore())
     player_pokemon.add_move(BulletSeed())
+    player_pokemon.add_move(TropKick())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
