@@ -237,6 +237,7 @@ def main():
     player_seed_pokemon.add_move(SappySeed())
     player_seed_pokemon.add_move(Leafage())
     player_seed_pokemon.add_move(GravApple())
+    player_seed_pokemon.add_move(VineWhip())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
