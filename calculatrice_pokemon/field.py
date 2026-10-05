@@ -328,7 +328,12 @@ class Field:
         ignore attack drops and defense boosts for the stat pair used by the
         move, by reversing those stat-stage multipliers.
         """
-        critical_stage = max(1, 1 + attacker.stat_modifiers["critical_hit"])
+        critical_stage = max(
+            1,
+            1
+            + attacker.stat_modifiers["critical_hit"]
+            + move.get_critical_hit_stage_bonus(attacker, defender, self),
+        )
         if critical_stage == 1:
             critical_chance = 1 / 24
         elif critical_stage == 2:

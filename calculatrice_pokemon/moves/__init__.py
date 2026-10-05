@@ -11,5 +11,6 @@ from .grass.leafage import Leafage
 from .grass.grav_apple import GravApple
 from .grass.vine_whip import VineWhip
 from .grass.grassy_glide import GrassyGlide
+from .grass.leaf_blade import LeafBlade
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide"]
+__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade"]

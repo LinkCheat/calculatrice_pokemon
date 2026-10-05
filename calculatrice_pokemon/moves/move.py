@@ -80,6 +80,10 @@ class Moves(ABC):
         """Return this move's priority; subclasses can make it situational."""
         return self.priority
 
+    def get_critical_hit_stage_bonus(self, user, target, field=None):
+        """Return this move's bonus to the critical-hit stage."""
+        return 0
+
     def get_hit_count(self, user, target):
         """Return the number of strikes this use of the move makes."""
         return 1

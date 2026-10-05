@@ -24,7 +24,7 @@ class GrassyGlideTests(unittest.TestCase):
         self.assertEqual(move.accuracy, 100)
         self.assertEqual(move.max_pp, 20)
         self.assertEqual(move.priority, 0)
-        self.assertFalse(move.contact)
+        self.assertTrue(move.contact)
         self.assertIsNone(move.effect(None, None))
 
     def test_priority_increases_by_one_on_grassy_terrain(self):

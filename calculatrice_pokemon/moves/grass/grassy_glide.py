@@ -20,6 +20,7 @@ class GrassyGlide(Moves):
             power=55,
             accuracy=100,
             max_pp=20,
+            contact=True,
         )
 
     def get_priority(self, user, target, field=None):
