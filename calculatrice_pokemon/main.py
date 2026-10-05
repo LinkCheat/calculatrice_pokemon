@@ -113,7 +113,10 @@ def _display_action_result(battle_field, action, result):
         else battle_field.player_active_pokemon
     )
     if result.get("unable_to_act"):
-        print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
+        if result.get("flinched"):
+            print(f"{action['pokemon'].name} est apeuré et ne peut pas agir.")
+        else:
+            print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
     elif result.get("fainted"):
         print(f"{action['pokemon'].name} est K.O. et ne peut pas agir.")
     elif not result["hit"]:
@@ -144,7 +147,7 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") in ("attack", "defense"):
+            if effect and effect.get("stat") in ("attack", "defense", "speed"):
                 recipient = (
                     action["pokemon"]
                     if effect.get("recipient") == "user"
@@ -153,6 +156,7 @@ def _display_action_result(battle_field, action, result):
                 stat_name = {
                     "attack": "L'Attaque",
                     "defense": "La Défense",
+                    "speed": "La Vitesse",
                 }[effect["stat"]]
                 if effect["applied"]:
                     change = "augmente" if effect["stages"] > 0 else "baisse"
@@ -173,6 +177,12 @@ def _display_action_result(battle_field, action, result):
                 )
                 if action["pokemon"].current_hp == 0:
                     print(f"{action['pokemon'].name} est K.O.")
+            if effect and effect.get("flinched"):
+                print(f"{target_pokemon.name} est apeuré.")
+            elif effect and effect.get("reason") == "target_already_acted":
+                print(
+                    f"{target_pokemon.name} a déjà agi et ne peut pas être apeuré."
+                )
             if effect and effect.get("condition") == "leech_seed":
                 if effect["applied"]:
                     print(f"{target_pokemon.name} est couvert par Vampigraine.")
@@ -271,6 +281,8 @@ def main():
     player_wood_hammer_pokemon.add_move(WoodHammer())
     player_ivy_cudgel_pokemon.add_move(IvyCudgel())
     player_ivy_cudgel_pokemon.add_move(PowerWhip())
+    player_ivy_cudgel_pokemon.add_move(NeedleArm())
+    player_ivy_cudgel_pokemon.add_move(DrumBeating())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

@@ -58,6 +58,8 @@ class Pokemon:
         self.sleep_turns_remaining = 0
         self.charging_move = None
         self.leech_seeded = False
+        self.flinched = False
+        self.has_acted_this_turn = False
         self.stat_modifiers = {
             "attack": 0,
             "defense": 0,

@@ -85,6 +85,8 @@ class Field:
             pokemon.current_hp = pokemon.max_hp
             pokemon.charging_move = None
             pokemon.leech_seeded = False
+            pokemon.flinched = False
+            pokemon.has_acted_this_turn = False
 
     def switch_pokemon(self, side, team_index):
         """Make a team member active and return it.
@@ -220,6 +222,9 @@ class Field:
 
     def resolve_turn(self, player_action_index, opponent_action_index):
         """Resolve both sides' actions in order, then advance the turn counter."""
+        for pokemon in self._player_team + self._opponent_team:
+            pokemon.has_acted_this_turn = False
+
         resolved_actions = self.determine_attack_order(
             player_action_index,
             opponent_action_index,
@@ -244,7 +249,12 @@ class Field:
                 result = self.resolve_move(action["side"], action["move"])
 
             turn_results.append({"action": action, "result": result})
+            for pokemon in self._get_team(action["side"]):
+                pokemon.has_acted_this_turn = True
 
+        for pokemon in self._player_team + self._opponent_team:
+            pokemon.flinched = False
+            pokemon.has_acted_this_turn = False
         if len(turn_results) == 2:
             self.turn_number += 1
             turn_results.extend(self._apply_leech_seed())
@@ -416,6 +426,17 @@ class Field:
         defender = self._get_active_pokemon(opponent_side)
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        if attacker.flinched:
+            attacker.flinched = False
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "unable_to_act": True,
+                "flinched": True,
+            }
         if attacker.status_condition is STATUS_CONDITION.SLEEP:
             if attacker.charging_move is move:
                 attacker.charging_move = None
