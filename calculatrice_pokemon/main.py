@@ -58,6 +58,8 @@ def input_player_action(battle_field, forced_switch=False):
             availability = " - déjà actif"
         elif selected_pokemon.current_hp <= 0:
             availability = " - K.O."
+        elif active_pokemon.current_hp > 0 and active_pokemon.snap_trap_turns_remaining > 0:
+            availability = " - piégé, switch impossible"
         else:
             valid_indexes.add(action_index)
             availability = ""
@@ -100,6 +102,17 @@ def _display_action_result(battle_field, action, result):
                 f"{result['recipient_name']} récupère "
                 f"{result['healed']} PV."
             )
+        return
+
+    if action["type"] == "snap_trap_residual":
+        print(
+            f"Troquenard retire {result['damage']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        if result["turns_remaining"] == 0:
+            print(f"{action['pokemon'].name} n'est plus piégé.")
+        if action["pokemon"].current_hp == 0:
+            print(f"{action['pokemon'].name} est K.O.")
         return
 
     if result.get("charging"):
@@ -190,6 +203,14 @@ def _display_action_result(battle_field, action, result):
                     print(f"{target_pokemon.name} est déjà couvert par Vampigraine.")
                 elif effect["reason"] == "target_fainted":
                     print(f"{target_pokemon.name} est K.O. et ne peut pas être couvert par Vampigraine.")
+            if effect and effect.get("condition") == "snap_trap":
+                if effect["applied"]:
+                    print(
+                        f"{target_pokemon.name} est piégé par Troquenard "
+                        f"pour {effect['turns']} tours."
+                    )
+                elif effect["reason"] == "target_fainted":
+                    print(f"{target_pokemon.name} est K.O. et ne peut pas être piégé.")
 
 
 def _announce_winner(battle_field):
@@ -282,6 +303,7 @@ def main():
     player_wood_hammer_pokemon.add_move(BranchPoke())
     player_wood_hammer_pokemon.add_move(PetalBlizzard())
     player_wood_hammer_pokemon.add_move(RazorLeaf())
+    player_wood_hammer_pokemon.add_move(SnapTrap())
     player_ivy_cudgel_pokemon.add_move(IvyCudgel())
     player_ivy_cudgel_pokemon.add_move(PowerWhip())
     player_ivy_cudgel_pokemon.add_move(NeedleArm())

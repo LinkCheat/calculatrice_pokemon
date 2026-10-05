@@ -85,6 +85,7 @@ class Field:
             pokemon.current_hp = pokemon.max_hp
             pokemon.charging_move = None
             pokemon.leech_seeded = False
+            pokemon.snap_trap_turns_remaining = 0
             pokemon.flinched = False
             pokemon.has_acted_this_turn = False
 
@@ -104,7 +105,13 @@ class Field:
 
         outgoing_pokemon = self._get_active_pokemon(side)
         if outgoing_pokemon is not None:
+            if (
+                outgoing_pokemon.current_hp > 0
+                and outgoing_pokemon.snap_trap_turns_remaining > 0
+            ):
+                raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
             outgoing_pokemon.leech_seeded = False
+            outgoing_pokemon.snap_trap_turns_remaining = 0
             outgoing_pokemon.charging_move = None
         self._set_active_index(side, team_index)
         return team[team_index]
@@ -171,6 +178,11 @@ class Field:
 
         if isinstance(action_index, int) and action_index > 4:
             team_index = action_index - self.SWITCH_INDEX_OFFSET
+            if (
+                active_pokemon.current_hp > 0
+                and active_pokemon.snap_trap_turns_remaining > 0
+            ):
+                raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
             if not 0 <= team_index < len(team):
                 raise ValueError(f"L'index de switch {action_index} ne désigne aucun Pokémon de l'équipe.")
             selected_pokemon = team[team_index]
@@ -258,7 +270,43 @@ class Field:
         if len(turn_results) == 2:
             self.turn_number += 1
             turn_results.extend(self._apply_leech_seed())
+            turn_results.extend(self._apply_snap_trap())
         return turn_results
+
+    def _apply_snap_trap(self):
+        """Damage and count down active Snap Trap effects at turn end."""
+        residual_results = []
+        for side in ("player", "opponent"):
+            trapped_pokemon = self._get_active_pokemon(side)
+            if (
+                trapped_pokemon is None
+                or trapped_pokemon.current_hp <= 0
+                or trapped_pokemon.snap_trap_turns_remaining <= 0
+            ):
+                continue
+
+            damage = min(
+                max(1, trapped_pokemon.max_hp // 8),
+                trapped_pokemon.current_hp,
+            )
+            trapped_pokemon.current_hp -= damage
+            trapped_pokemon.snap_trap_turns_remaining -= 1
+            turns_remaining = trapped_pokemon.snap_trap_turns_remaining
+            if turns_remaining == 0:
+                trapped_pokemon.snap_trap_turns_remaining = 0
+
+            residual_results.append({
+                "action": {
+                    "type": "snap_trap_residual",
+                    "side": side,
+                    "pokemon": trapped_pokemon,
+                },
+                "result": {
+                    "damage": damage,
+                    "turns_remaining": turns_remaining,
+                },
+            })
+        return residual_results
 
     def _apply_leech_seed(self):
         """Drain seeded active Pokémon and heal the active Pokémon on the other side."""
