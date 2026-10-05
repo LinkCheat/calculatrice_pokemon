@@ -26,19 +26,27 @@ def input_player_action(battle_field, forced_switch=False):
 
     print(f"Actions disponibles pour {active_pokemon.name} :")
     if not forced_switch:
-        for move_index, selected_move in enumerate(active_pokemon.moves):
-            if move_index >= pokemon.Pokemon.MAX_MOVES:
-                break
-
-            if selected_move.pp > 0:
-                valid_indexes.add(move_index)
-                availability = ""
-            else:
-                availability = " - inutilisable (0 PP)"
+        if active_pokemon.charging_move is not None:
+            move_index = active_pokemon.moves.index(active_pokemon.charging_move)
+            valid_indexes.add(move_index)
             print(
-                f"{move_index}: Attaque {selected_move.name} "
-                f"({selected_move.pp}/{selected_move.max_pp} PP){availability}"
+                f"{move_index}: Attaque {active_pokemon.charging_move.name} "
+                "(tour de frappe)"
             )
+        else:
+            for move_index, selected_move in enumerate(active_pokemon.moves):
+                if move_index >= pokemon.Pokemon.MAX_MOVES:
+                    break
+
+                if selected_move.pp > 0:
+                    valid_indexes.add(move_index)
+                    availability = ""
+                else:
+                    availability = " - inutilisable (0 PP)"
+                print(
+                    f"{move_index}: Attaque {selected_move.name} "
+                    f"({selected_move.pp}/{selected_move.max_pp} PP){availability}"
+                )
 
     for team_index in range(battle_field.MAX_TEAM_SIZE):
         action_index = battle_field.SWITCH_INDEX_OFFSET + team_index
@@ -92,6 +100,10 @@ def _display_action_result(battle_field, action, result):
                 f"{result['recipient_name']} récupère "
                 f"{result['healed']} PV."
             )
+        return
+
+    if result.get("charging"):
+        print(f"{action['pokemon'].name} concentre la lumière pour {action['move'].name}.")
         return
 
     target_side = "opponent" if action["side"] == "player" else "player"
@@ -242,6 +254,7 @@ def main():
     player_seed_pokemon.add_move(VineWhip())
     player_grassy_pokemon.add_move(GrassyGlide())
     player_grassy_pokemon.add_move(LeafBlade())
+    player_grassy_pokemon.add_move(SolarBlade())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

@@ -84,6 +84,10 @@ class Moves(ABC):
         """Return this move's bonus to the critical-hit stage."""
         return 0
 
+    def requires_charge(self, field):
+        """Return whether this move needs a charging turn in the current field."""
+        return False
+
     def get_hit_count(self, user, target):
         """Return the number of strikes this use of the move makes."""
         return 1

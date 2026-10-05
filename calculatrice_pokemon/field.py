@@ -83,6 +83,7 @@ class Field:
         for pokemon in self._player_team + self._opponent_team:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
+            pokemon.charging_move = None
             pokemon.leech_seeded = False
 
     def switch_pokemon(self, side, team_index):
@@ -102,6 +103,7 @@ class Field:
         outgoing_pokemon = self._get_active_pokemon(side)
         if outgoing_pokemon is not None:
             outgoing_pokemon.leech_seeded = False
+            outgoing_pokemon.charging_move = None
         self._set_active_index(side, team_index)
         return team[team_index]
 
@@ -152,8 +154,8 @@ class Field:
         if isinstance(action_index, int) and 0 <= action_index < 4:
             if action_index >= len(active_pokemon.moves):
                 raise ValueError(f"Aucune attaque à l'index {action_index} pour le Pokémon actif.")
-            selected_move = active_pokemon.moves[action_index]
-            if selected_move.pp <= 0:
+            selected_move = active_pokemon.charging_move or active_pokemon.moves[action_index]
+            if active_pokemon.charging_move is None and selected_move.pp <= 0:
                 raise ValueError(f"{selected_move.name} n'a plus de PP et ne peut pas être sélectionnée.")
             opposing_side = "opponent" if side == "player" else "player"
             target = self._get_active_pokemon(opposing_side)
@@ -414,6 +416,8 @@ class Field:
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
         if attacker.status_condition is STATUS_CONDITION.SLEEP:
+            if attacker.charging_move is move:
+                attacker.charging_move = None
             attacker.sleep_turns_remaining -= 1
             if attacker.sleep_turns_remaining <= 0:
                 attacker.sleep_turns_remaining = 0
@@ -425,10 +429,24 @@ class Field:
                 "effect": None,
                 "unable_to_act": True,
             }
-        if move.pp <= 0:
+        is_releasing_charge = attacker.charging_move is move
+        if not is_releasing_charge and move.pp <= 0:
             raise ValueError(f"{move.name} n'a plus de PP et ne peut pas être utilisée.")
 
-        move.consume_pp()
+        if is_releasing_charge:
+            attacker.charging_move = None
+        else:
+            move.consume_pp()
+            if move.requires_charge(self):
+                attacker.charging_move = move
+                return {
+                    "hit": True,
+                    "immune": False,
+                    "damage": 0,
+                    "effect": None,
+                    "charging": True,
+                }
+
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
 
