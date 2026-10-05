@@ -165,6 +165,14 @@ def _display_action_result(battle_field, action, result):
                     f"{action['pokemon'].name} récupère "
                     f"{effect['healed']} PV."
                 )
+            if effect and "recoil" in effect:
+                print(
+                    f"{action['pokemon'].name} perd "
+                    f"{effect['recoil']} PV à cause du contrecoup. "
+                    f"PV restants : {action['pokemon'].current_hp}"
+                )
+                if action["pokemon"].current_hp == 0:
+                    print(f"{action['pokemon'].name} est K.O.")
             if effect and effect.get("condition") == "leech_seed":
                 if effect["applied"]:
                     print(f"{target_pokemon.name} est couvert par Vampigraine.")
@@ -218,12 +226,14 @@ def main():
     player_bench_pokemon = pokemon.Pokemon("Pikachu")
     player_seed_pokemon = pokemon.Pokemon("Bulbasaur")
     player_grassy_pokemon = pokemon.Pokemon("Bulbasaur")
+    player_wood_hammer_pokemon = pokemon.Pokemon("Bulbasaur")
     opponent_pokemon = pokemon.Pokemon("Greninja")
     opponent_bench_pokemon = pokemon.Pokemon("Eevee")
     battle_field.add_pokemon(player_pokemon, "player")
     battle_field.add_pokemon(player_bench_pokemon, "player")
     battle_field.add_pokemon(player_seed_pokemon, "player")
     battle_field.add_pokemon(player_grassy_pokemon, "player")
+    battle_field.add_pokemon(player_wood_hammer_pokemon, "player")
     battle_field.add_pokemon(opponent_pokemon, "opponent")
     battle_field.add_pokemon(opponent_bench_pokemon, "opponent")
 
@@ -256,6 +266,7 @@ def main():
     player_grassy_pokemon.add_move(LeafBlade())
     player_grassy_pokemon.add_move(SolarBlade())
     player_grassy_pokemon.add_move(FlowerTrick())
+    player_wood_hammer_pokemon.add_move(WoodHammer())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
