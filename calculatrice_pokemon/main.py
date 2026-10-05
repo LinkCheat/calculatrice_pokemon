@@ -255,6 +255,7 @@ def main():
     player_grassy_pokemon.add_move(GrassyGlide())
     player_grassy_pokemon.add_move(LeafBlade())
     player_grassy_pokemon.add_move(SolarBlade())
+    player_grassy_pokemon.add_move(FlowerTrick())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
