@@ -15,5 +15,6 @@ from .grass.leaf_blade import LeafBlade
 from .grass.solar_blade import SolarBlade
 from .grass.flower_trick import FlowerTrick
 from .grass.wood_hammer import WoodHammer
+from .grass.ivy_cudgel import IvyCudgel
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer"]
+__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel"]

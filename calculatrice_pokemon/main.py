@@ -227,6 +227,7 @@ def main():
     player_seed_pokemon = pokemon.Pokemon("Bulbasaur")
     player_grassy_pokemon = pokemon.Pokemon("Bulbasaur")
     player_wood_hammer_pokemon = pokemon.Pokemon("Bulbasaur")
+    player_ivy_cudgel_pokemon = pokemon.Pokemon("Bulbasaur")
     opponent_pokemon = pokemon.Pokemon("Greninja")
     opponent_bench_pokemon = pokemon.Pokemon("Eevee")
     battle_field.add_pokemon(player_pokemon, "player")
@@ -234,6 +235,7 @@ def main():
     battle_field.add_pokemon(player_seed_pokemon, "player")
     battle_field.add_pokemon(player_grassy_pokemon, "player")
     battle_field.add_pokemon(player_wood_hammer_pokemon, "player")
+    battle_field.add_pokemon(player_ivy_cudgel_pokemon, "player")
     battle_field.add_pokemon(opponent_pokemon, "opponent")
     battle_field.add_pokemon(opponent_bench_pokemon, "opponent")
 
@@ -267,6 +269,7 @@ def main():
     player_grassy_pokemon.add_move(SolarBlade())
     player_grassy_pokemon.add_move(FlowerTrick())
     player_wood_hammer_pokemon.add_move(WoodHammer())
+    player_ivy_cudgel_pokemon.add_move(IvyCudgel())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

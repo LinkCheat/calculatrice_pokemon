@@ -76,6 +76,10 @@ class Moves(ABC):
         """Return this move's base power; subclasses can make it situational."""
         return self.power
 
+    def get_type(self, user, target=None, field=None):
+        """Return this move's type; subclasses can make it situational."""
+        return self.type
+
     def get_priority(self, user, target, field=None):
         """Return this move's priority; subclasses can make it situational."""
         return self.priority

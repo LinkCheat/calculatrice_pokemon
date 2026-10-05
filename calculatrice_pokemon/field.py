@@ -302,24 +302,25 @@ class Field:
             return True
         return random.random() * 100 < max(0, hit_chance)
 
-    def calculate_move_effectiveness(self, move, defender):
+    def calculate_move_effectiveness(self, move, defender, attacker=None):
         """Multiply type effectiveness across all of the defender's types."""
+        move_type = move.get_type(attacker, defender, self)
         effectiveness = 1.0
         for defending_type in defender.type:
-            effectiveness *= self.calculate_type_effectiveness(move.type, defending_type)
+            effectiveness *= self.calculate_type_effectiveness(move_type, defending_type)
         return effectiveness
 
-    def is_immune_to_move(self, move, defender):
+    def is_immune_to_move(self, move, defender, attacker=None):
         """Return whether type matchup or powder immunity prevents a move."""
         if move.powder and Type.GRASS in defender.type:
             return True
         if move.grass_type_immune and Type.GRASS in defender.type:
             return True
-        return self.calculate_move_effectiveness(move, defender) == 0
+        return self.calculate_move_effectiveness(move, defender, attacker) == 0
 
     def calculate_stab_multiplier(self, attacker, move):
         """Return the same-type attack bonus multiplier for this attacker and move."""
-        return 1.5 if move.type in attacker.type else 1.0
+        return 1.5 if move.get_type(attacker, field=self) in attacker.type else 1.0
 
     def calculate_critical_hit_multiplier(self, attacker, defender, move):
         """Roll for a critical hit and return its damage multiplier.
@@ -371,7 +372,7 @@ class Field:
     def calculate_damage_modifiers(self, attacker, defender, move):
         """Combine type effectiveness, STAB, and the critical-hit multiplier."""
         return (
-            self.calculate_move_effectiveness(move, defender)
+            self.calculate_move_effectiveness(move, defender, attacker)
             * self.calculate_stab_multiplier(attacker, move)
             * self.calculate_critical_hit_multiplier(attacker, defender, move)
         )
@@ -450,7 +451,7 @@ class Field:
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
 
-        if self.is_immune_to_move(move, defender):
+        if self.is_immune_to_move(move, defender, attacker):
             return {"hit": True, "immune": True, "damage": 0, "effect": None, "hits": 0}
 
         attacker.calculateStats()
