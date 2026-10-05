@@ -193,6 +193,7 @@ def main():
     player_pokemon.add_move(Spore())
     player_pokemon.add_move(BulletSeed())
     player_pokemon.add_move(TropKick())
+    player_bench_pokemon.add_move(SeedBomb())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
