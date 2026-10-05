@@ -155,12 +155,14 @@ class Field:
             selected_move = active_pokemon.moves[action_index]
             if selected_move.pp <= 0:
                 raise ValueError(f"{selected_move.name} n'a plus de PP et ne peut pas être sélectionnée.")
+            opposing_side = "opponent" if side == "player" else "player"
+            target = self._get_active_pokemon(opposing_side)
             return {
                 "side": side,
                 "type": "move",
                 "pokemon": active_pokemon,
                 "move": selected_move,
-                "priority": selected_move.priority,
+                "priority": selected_move.get_priority(active_pokemon, target, self),
             }
 
         if isinstance(action_index, int) and action_index > 4:

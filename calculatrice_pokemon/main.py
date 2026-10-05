@@ -205,11 +205,13 @@ def main():
     player_pokemon = pokemon.Pokemon("Charizard", "Mega Charizard X")
     player_bench_pokemon = pokemon.Pokemon("Pikachu")
     player_seed_pokemon = pokemon.Pokemon("Bulbasaur")
+    player_grassy_pokemon = pokemon.Pokemon("Bulbasaur")
     opponent_pokemon = pokemon.Pokemon("Greninja")
     opponent_bench_pokemon = pokemon.Pokemon("Eevee")
     battle_field.add_pokemon(player_pokemon, "player")
     battle_field.add_pokemon(player_bench_pokemon, "player")
     battle_field.add_pokemon(player_seed_pokemon, "player")
+    battle_field.add_pokemon(player_grassy_pokemon, "player")
     battle_field.add_pokemon(opponent_pokemon, "opponent")
     battle_field.add_pokemon(opponent_bench_pokemon, "opponent")
 
@@ -238,6 +240,7 @@ def main():
     player_seed_pokemon.add_move(Leafage())
     player_seed_pokemon.add_move(GravApple())
     player_seed_pokemon.add_move(VineWhip())
+    player_grassy_pokemon.add_move(GrassyGlide())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
