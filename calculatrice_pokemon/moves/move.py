@@ -104,6 +104,30 @@ class Moves(ABC):
             "sleep_turns": sleep_turns,
         }
 
+    def inflict_leech_seed(self, target):
+        """Seed a living, unseeded target until it leaves the field."""
+        if target.current_hp <= 0:
+            return {
+                "name": self.name,
+                "condition": "leech_seed",
+                "applied": False,
+                "reason": "target_fainted",
+            }
+        if target.leech_seeded:
+            return {
+                "name": self.name,
+                "condition": "leech_seed",
+                "applied": False,
+                "reason": "already_seeded",
+            }
+
+        target.leech_seeded = True
+        return {
+            "name": self.name,
+            "condition": "leech_seed",
+            "applied": True,
+        }
+
     def __str__(self):
         """Format the move name and type for display."""
         return f"{self.name} ({self.type.value})"

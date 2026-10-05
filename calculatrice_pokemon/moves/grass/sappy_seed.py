@@ -8,18 +8,19 @@ except ModuleNotFoundError:
     from calculatrice_pokemon.moves.move import Moves
 
 
-class LeechSeed(Moves):
+class SappySeed(Moves):
     def __init__(self):
-        """Create the Grass-type status move Leech Seed."""
+        """Create the Grass-type physical move Sappy Seed."""
         super().__init__(
-            name="Leech Seed",
+            name="Sappy Seed",
             move_type=Type.GRASS,
-            category=MoveCategory.STATUS,
-            accuracy=90,
-            max_pp=10,
+            category=MoveCategory.PHYSICAL,
+            power=90,
+            accuracy=100,
+            max_pp=15,
             grass_type_immune=True,
         )
 
     def effect(self, user, target):
-        """Seed the target until it leaves the field, unless already seeded."""
+        """Apply Leech Seed to the target after a successful damaging hit."""
         return self.inflict_leech_seed(target)

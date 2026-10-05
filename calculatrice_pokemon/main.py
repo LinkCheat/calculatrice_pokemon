@@ -108,11 +108,6 @@ def _display_action_result(battle_field, action, result):
         print(f"{action['pokemon'].name} rate {action['move'].name}.")
     elif result["immune"]:
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
-    elif result["effect"] and result["effect"].get("condition") == "leech_seed":
-        if result["effect"]["applied"]:
-            print(f"{target_pokemon.name} est couvert par Vampigraine.")
-        else:
-            print(f"{target_pokemon.name} est déjà couvert par Vampigraine.")
     else:
         effect = result["effect"]
         if effect and "status" in effect:
@@ -154,6 +149,13 @@ def _display_action_result(battle_field, action, result):
                     f"{action['pokemon'].name} récupère "
                     f"{effect['healed']} PV."
                 )
+            if effect and effect.get("condition") == "leech_seed":
+                if effect["applied"]:
+                    print(f"{target_pokemon.name} est couvert par Vampigraine.")
+                elif effect["reason"] == "already_seeded":
+                    print(f"{target_pokemon.name} est déjà couvert par Vampigraine.")
+                elif effect["reason"] == "target_fainted":
+                    print(f"{target_pokemon.name} est K.O. et ne peut pas être couvert par Vampigraine.")
 
 
 def _announce_winner(battle_field):
@@ -198,10 +200,12 @@ def main():
     battle_field = field.Field()
     player_pokemon = pokemon.Pokemon("Charizard", "Mega Charizard X")
     player_bench_pokemon = pokemon.Pokemon("Pikachu")
+    player_seed_pokemon = pokemon.Pokemon("Bulbasaur")
     opponent_pokemon = pokemon.Pokemon("Greninja")
     opponent_bench_pokemon = pokemon.Pokemon("Eevee")
     battle_field.add_pokemon(player_pokemon, "player")
     battle_field.add_pokemon(player_bench_pokemon, "player")
+    battle_field.add_pokemon(player_seed_pokemon, "player")
     battle_field.add_pokemon(opponent_pokemon, "opponent")
     battle_field.add_pokemon(opponent_bench_pokemon, "opponent")
 
@@ -226,6 +230,7 @@ def main():
     player_bench_pokemon.add_move(Trailblaze())
     player_bench_pokemon.add_move(HornLeech())
     player_bench_pokemon.add_move(LeechSeed())
+    player_seed_pokemon.add_move(SappySeed())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
