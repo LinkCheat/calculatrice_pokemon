@@ -270,6 +270,7 @@ def main():
     player_grassy_pokemon.add_move(FlowerTrick())
     player_wood_hammer_pokemon.add_move(WoodHammer())
     player_ivy_cudgel_pokemon.add_move(IvyCudgel())
+    player_ivy_cudgel_pokemon.add_move(PowerWhip())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
