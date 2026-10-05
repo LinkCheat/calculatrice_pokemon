@@ -108,9 +108,12 @@ def _display_action_result(battle_field, action, result):
         else:
             print(f"{target_pokemon.name} est déjà affecté par un statut.")
     else:
+        hit_count = result.get("hits", 1)
+        hit_description = f"et touche {hit_count} fois " if hit_count > 1 else ""
         print(
             f"{action['pokemon'].name} utilise {action['move'].name} "
-            f"et inflige {result['damage']} dégâts. "
+            f"{hit_description}et "
+            f"inflige {result['damage']} dégâts. "
             f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
         )
         if target_pokemon.current_hp == 0:
@@ -180,6 +183,7 @@ def main():
 
     player_pokemon.add_move(Tackle())
     player_pokemon.add_move(Spore())
+    player_pokemon.add_move(BulletSeed())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

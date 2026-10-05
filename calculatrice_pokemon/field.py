@@ -382,21 +382,30 @@ class Field:
 
         move.consume_pp()
         if not self.attack_hits(attacker, defender, move):
-            return {"hit": False, "immune": False, "damage": 0, "effect": None}
+            return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
 
         if self.is_immune_to_move(move, defender):
-            return {"hit": True, "immune": True, "damage": 0, "effect": None}
+            return {"hit": True, "immune": True, "damage": 0, "effect": None, "hits": 0}
 
         attacker.calculateStats()
         defender.calculateStats()
-        damage = self.calculate_damage(attacker, defender, move)
-        defender.current_hp = max(0, defender.current_hp - damage)
+        damage = 0
+        hits = 0
+        for _ in range(move.get_hit_count(attacker, defender)):
+            if defender.current_hp <= 0:
+                break
+            hit_damage = self.calculate_damage(attacker, defender, move)
+            damage += hit_damage
+            defender.current_hp = max(0, defender.current_hp - hit_damage)
+            hits += 1
+
         effect = move.effect(attacker, defender)
         return {
             "hit": True,
             "immune": False,
             "damage": damage,
             "effect": effect,
+            "hits": hits,
         }
 
     @staticmethod

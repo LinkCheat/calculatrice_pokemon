@@ -70,6 +70,10 @@ class Moves(ABC):
         """Return this move's base power; subclasses can make it situational."""
         return self.power
 
+    def get_hit_count(self, user, target):
+        """Return the number of strikes this use of the move makes."""
+        return 1
+
     def calculate_damage(self, user, target, standard_damage):
         """Return the calculated damage unchanged unless a subclass overrides it."""
         return standard_damage
