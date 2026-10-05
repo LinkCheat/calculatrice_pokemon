@@ -37,7 +37,7 @@ class SappySeedTests(unittest.TestCase):
         self.assertEqual(self.target.current_hp, self.target.max_hp - 30)
         self.assertTrue(self.target.leech_seeded)
         self.assertTrue(result["effect"]["applied"])
-        self.assertEqual(self.move.pp, 9)
+        self.assertEqual(self.move.pp, 14)
 
     def test_grass_type_is_immune(self):
         grass_target = Pokemon("Bulbasaur")

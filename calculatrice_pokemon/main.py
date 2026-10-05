@@ -231,6 +231,7 @@ def main():
     player_bench_pokemon.add_move(HornLeech())
     player_bench_pokemon.add_move(LeechSeed())
     player_seed_pokemon.add_move(SappySeed())
+    player_seed_pokemon.add_move(Leafage())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

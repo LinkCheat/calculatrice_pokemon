@@ -7,5 +7,6 @@ from .grass.trailblaze import Trailblaze
 from .grass.horn_leech import HornLeech
 from .grass.leech_seed import LeechSeed
 from .grass.sappy_seed import SappySeed
+from .grass.leafage import Leafage
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed"]
+__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage"]
