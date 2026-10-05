@@ -54,6 +54,10 @@ class Moves(ABC):
         """Apply this move's move-specific effect and return its result."""
         raise NotImplementedError
 
+    def apply_effect(self, user, target, damage_dealt):
+        """Apply this move's effect after damage has been dealt."""
+        return self.effect(user, target)
+
     def use(self, user, target):
         """Consume one PP and apply the move's effect to its target."""
         self.consume_pp()

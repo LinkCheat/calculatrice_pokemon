@@ -121,10 +121,22 @@ def _display_action_result(battle_field, action, result):
                 print(f"{target_pokemon.name} est K.O.")
 
             if effect and effect.get("stat") == "attack":
+                recipient = (
+                    action["pokemon"]
+                    if effect.get("recipient") == "user"
+                    else target_pokemon
+                )
                 if effect["applied"]:
-                    print(f"L'Attaque de {target_pokemon.name} baisse d'un cran.")
+                    change = "augmente" if effect["stages"] > 0 else "baisse"
+                    print(f"L'Attaque de {recipient.name} {change} d'un cran.")
                 else:
-                    print(f"L'Attaque de {target_pokemon.name} ne peut pas baisser davantage.")
+                    limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
+                    print(f"L'Attaque de {recipient.name} ne peut pas {limit} davantage.")
+            if effect and "healed" in effect:
+                print(
+                    f"{action['pokemon'].name} récupère "
+                    f"{effect['healed']} PV."
+                )
 
 
 def _announce_winner(battle_field):
@@ -194,6 +206,8 @@ def main():
     player_pokemon.add_move(BulletSeed())
     player_pokemon.add_move(TropKick())
     player_bench_pokemon.add_move(SeedBomb())
+    player_bench_pokemon.add_move(Trailblaze())
+    player_bench_pokemon.add_move(HornLeech())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

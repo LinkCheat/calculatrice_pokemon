@@ -390,16 +390,18 @@ class Field:
         attacker.calculateStats()
         defender.calculateStats()
         damage = 0
+        damage_dealt = 0
         hits = 0
         for _ in range(move.get_hit_count(attacker, defender)):
             if defender.current_hp <= 0:
                 break
             hit_damage = self.calculate_damage(attacker, defender, move)
             damage += hit_damage
+            damage_dealt += min(hit_damage, defender.current_hp)
             defender.current_hp = max(0, defender.current_hp - hit_damage)
             hits += 1
 
-        effect = move.effect(attacker, defender)
+        effect = move.apply_effect(attacker, defender, damage_dealt)
         return {
             "hit": True,
             "immune": False,
