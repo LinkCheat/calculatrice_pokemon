@@ -28,6 +28,7 @@ class Moves(ABC):
 
         contact: bool = False,
         powder: bool = False,
+        grass_type_immune: bool = False,
     ):
         """Initialize move metadata and set current PP to the maximum PP.
 
@@ -48,6 +49,7 @@ class Moves(ABC):
 
         self.contact = contact
         self.powder = powder
+        self.grass_type_immune = grass_type_immune
 
     @abstractmethod
     def effect(self, user, target):

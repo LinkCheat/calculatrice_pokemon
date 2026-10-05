@@ -82,6 +82,7 @@ class Field:
         for pokemon in self._player_team + self._opponent_team:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
+            pokemon.leech_seeded = False
 
     def switch_pokemon(self, side, team_index):
         """Make a team member active and return it.
@@ -97,6 +98,9 @@ class Field:
         if team_index == self._get_active_index(side):
             raise ValueError("Ce Pokémon est déjà actif.")
 
+        outgoing_pokemon = self._get_active_pokemon(side)
+        if outgoing_pokemon is not None:
+            outgoing_pokemon.leech_seeded = False
         self._set_active_index(side, team_index)
         return team[team_index]
 
@@ -238,7 +242,41 @@ class Field:
 
         if len(turn_results) == 2:
             self.turn_number += 1
+            turn_results.extend(self._apply_leech_seed())
         return turn_results
+
+    def _apply_leech_seed(self):
+        """Drain seeded active Pokémon and heal the active Pokémon on the other side."""
+        residual_results = []
+        for target_side in ("player", "opponent"):
+            target = self._get_active_pokemon(target_side)
+            if target is None or not target.leech_seeded or target.current_hp <= 0:
+                continue
+
+            drain_amount = max(1, target.max_hp // 8)
+            drained = min(drain_amount, target.current_hp)
+            target.current_hp -= drained
+
+            recipient_side = "opponent" if target_side == "player" else "player"
+            recipient = self._get_active_pokemon(recipient_side)
+            healed = 0
+            if recipient is not None and recipient.current_hp > 0:
+                healed = min(drained, recipient.max_hp - recipient.current_hp)
+                recipient.current_hp += healed
+
+            residual_results.append({
+                "action": {
+                    "type": "leech_seed_residual",
+                    "side": target_side,
+                    "pokemon": target,
+                },
+                "result": {
+                    "drained": drained,
+                    "healed": healed,
+                    "recipient_name": recipient.name if recipient is not None else None,
+                },
+            })
+        return residual_results
 
     @staticmethod
     def _stage_multiplier(stage):
@@ -269,6 +307,8 @@ class Field:
     def is_immune_to_move(self, move, defender):
         """Return whether type matchup or powder immunity prevents a move."""
         if move.powder and Type.GRASS in defender.type:
+            return True
+        if move.grass_type_immune and Type.GRASS in defender.type:
             return True
         return self.calculate_move_effectiveness(move, defender) == 0
 

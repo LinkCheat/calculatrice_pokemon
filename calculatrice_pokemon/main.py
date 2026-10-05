@@ -82,6 +82,18 @@ def _display_action_result(battle_field, action, result):
         print(f"{action['side']} switch vers {action['pokemon'].name}")
         return
 
+    if action["type"] == "leech_seed_residual":
+        print(
+            f"Vampigraine retire {result['drained']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        if result["healed"]:
+            print(
+                f"{result['recipient_name']} récupère "
+                f"{result['healed']} PV."
+            )
+        return
+
     target_side = "opponent" if action["side"] == "player" else "player"
     target_pokemon = (
         battle_field.opponent_active_pokemon
@@ -96,6 +108,11 @@ def _display_action_result(battle_field, action, result):
         print(f"{action['pokemon'].name} rate {action['move'].name}.")
     elif result["immune"]:
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
+    elif result["effect"] and result["effect"].get("condition") == "leech_seed":
+        if result["effect"]["applied"]:
+            print(f"{target_pokemon.name} est couvert par Vampigraine.")
+        else:
+            print(f"{target_pokemon.name} est déjà couvert par Vampigraine.")
     else:
         effect = result["effect"]
         if effect and "status" in effect:
@@ -208,6 +225,7 @@ def main():
     player_bench_pokemon.add_move(SeedBomb())
     player_bench_pokemon.add_move(Trailblaze())
     player_bench_pokemon.add_move(HornLeech())
+    player_bench_pokemon.add_move(LeechSeed())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]
