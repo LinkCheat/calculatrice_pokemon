@@ -72,7 +72,7 @@ class Moves(ABC):
 
         self.pp -= 1
 
-    def get_power(self, user, target):
+    def get_power(self, user, target, field=None):
         """Return this move's base power; subclasses can make it situational."""
         return self.power
 

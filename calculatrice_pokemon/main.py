@@ -132,18 +132,22 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") == "attack":
+            if effect and effect.get("stat") in ("attack", "defense"):
                 recipient = (
                     action["pokemon"]
                     if effect.get("recipient") == "user"
                     else target_pokemon
                 )
+                stat_name = {
+                    "attack": "L'Attaque",
+                    "defense": "La Défense",
+                }[effect["stat"]]
                 if effect["applied"]:
                     change = "augmente" if effect["stages"] > 0 else "baisse"
-                    print(f"L'Attaque de {recipient.name} {change} d'un cran.")
+                    print(f"{stat_name} de {recipient.name} {change} d'un cran.")
                 else:
                     limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
-                    print(f"L'Attaque de {recipient.name} ne peut pas {limit} davantage.")
+                    print(f"{stat_name} de {recipient.name} ne peut pas {limit} davantage.")
             if effect and "healed" in effect:
                 print(
                     f"{action['pokemon'].name} récupère "
@@ -232,6 +236,7 @@ def main():
     player_bench_pokemon.add_move(LeechSeed())
     player_seed_pokemon.add_move(SappySeed())
     player_seed_pokemon.add_move(Leafage())
+    player_seed_pokemon.add_move(GravApple())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

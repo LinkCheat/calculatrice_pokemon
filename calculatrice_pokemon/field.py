@@ -26,6 +26,7 @@ class Field:
 
         self.weather = None
         self.terrain = None
+        self.gravity_active = False
 
     @property
     def player_team(self):
@@ -384,7 +385,7 @@ class Field:
         else:
             raise ValueError(f"Catégorie d'attaque inconnue : {move.category}")
 
-        power = move.get_power(attacker, defender)
+        power = move.get_power(attacker, defender, self)
         base_damage = math.floor(attacker.level * 0.4 + 2)
         base_damage = math.floor(base_damage * attack_stat * power / defense_stat)
         base_damage = math.floor(base_damage / 50) + 2
