@@ -281,6 +281,7 @@ def main():
     player_wood_hammer_pokemon.add_move(WoodHammer())
     player_wood_hammer_pokemon.add_move(BranchPoke())
     player_wood_hammer_pokemon.add_move(PetalBlizzard())
+    player_wood_hammer_pokemon.add_move(RazorLeaf())
     player_ivy_cudgel_pokemon.add_move(IvyCudgel())
     player_ivy_cudgel_pokemon.add_move(PowerWhip())
     player_ivy_cudgel_pokemon.add_move(NeedleArm())
