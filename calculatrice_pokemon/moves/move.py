@@ -28,6 +28,7 @@ class Moves(ABC):
 
         contact: bool = False,
         powder: bool = False,
+        grass_type_immune: bool = False,
     ):
         """Initialize move metadata and set current PP to the maximum PP.
 
@@ -48,11 +49,16 @@ class Moves(ABC):
 
         self.contact = contact
         self.powder = powder
+        self.grass_type_immune = grass_type_immune
 
     @abstractmethod
     def effect(self, user, target):
         """Apply this move's move-specific effect and return its result."""
         raise NotImplementedError
+
+    def apply_effect(self, user, target, damage_dealt):
+        """Apply this move's effect after damage has been dealt."""
+        return self.effect(user, target)
 
     def use(self, user, target):
         """Consume one PP and apply the move's effect to its target."""
@@ -66,9 +72,29 @@ class Moves(ABC):
 
         self.pp -= 1
 
-    def get_power(self, user, target):
+    def get_power(self, user, target, field=None):
         """Return this move's base power; subclasses can make it situational."""
         return self.power
+
+    def get_type(self, user, target=None, field=None):
+        """Return this move's type; subclasses can make it situational."""
+        return self.type
+
+    def get_priority(self, user, target, field=None):
+        """Return this move's priority; subclasses can make it situational."""
+        return self.priority
+
+    def get_critical_hit_stage_bonus(self, user, target, field=None):
+        """Return this move's bonus to the critical-hit stage."""
+        return 0
+
+    def requires_charge(self, field):
+        """Return whether this move needs a charging turn in the current field."""
+        return False
+
+    def get_hit_count(self, user, target):
+        """Return the number of strikes this use of the move makes."""
+        return 1
 
     def calculate_damage(self, user, target, standard_damage):
         """Return the calculated damage unchanged unless a subclass overrides it."""
@@ -92,6 +118,30 @@ class Moves(ABC):
             "status": STATUS_CONDITION.SLEEP,
             "applied": True,
             "sleep_turns": sleep_turns,
+        }
+
+    def inflict_leech_seed(self, target):
+        """Seed a living, unseeded target until it leaves the field."""
+        if target.current_hp <= 0:
+            return {
+                "name": self.name,
+                "condition": "leech_seed",
+                "applied": False,
+                "reason": "target_fainted",
+            }
+        if target.leech_seeded:
+            return {
+                "name": self.name,
+                "condition": "leech_seed",
+                "applied": False,
+                "reason": "already_seeded",
+            }
+
+        target.leech_seeded = True
+        return {
+            "name": self.name,
+            "condition": "leech_seed",
+            "applied": True,
         }
 
     def __str__(self):

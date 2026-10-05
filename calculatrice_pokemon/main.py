@@ -26,19 +26,27 @@ def input_player_action(battle_field, forced_switch=False):
 
     print(f"Actions disponibles pour {active_pokemon.name} :")
     if not forced_switch:
-        for move_index, selected_move in enumerate(active_pokemon.moves):
-            if move_index >= pokemon.Pokemon.MAX_MOVES:
-                break
-
-            if selected_move.pp > 0:
-                valid_indexes.add(move_index)
-                availability = ""
-            else:
-                availability = " - inutilisable (0 PP)"
+        if active_pokemon.charging_move is not None:
+            move_index = active_pokemon.moves.index(active_pokemon.charging_move)
+            valid_indexes.add(move_index)
             print(
-                f"{move_index}: Attaque {selected_move.name} "
-                f"({selected_move.pp}/{selected_move.max_pp} PP){availability}"
+                f"{move_index}: Attaque {active_pokemon.charging_move.name} "
+                "(tour de frappe)"
             )
+        else:
+            for move_index, selected_move in enumerate(active_pokemon.moves):
+                if move_index >= pokemon.Pokemon.MAX_MOVES:
+                    break
+
+                if selected_move.pp > 0:
+                    valid_indexes.add(move_index)
+                    availability = ""
+                else:
+                    availability = " - inutilisable (0 PP)"
+                print(
+                    f"{move_index}: Attaque {selected_move.name} "
+                    f"({selected_move.pp}/{selected_move.max_pp} PP){availability}"
+                )
 
     for team_index in range(battle_field.MAX_TEAM_SIZE):
         action_index = battle_field.SWITCH_INDEX_OFFSET + team_index
@@ -50,6 +58,8 @@ def input_player_action(battle_field, forced_switch=False):
             availability = " - déjà actif"
         elif selected_pokemon.current_hp <= 0:
             availability = " - K.O."
+        elif active_pokemon.current_hp > 0 and active_pokemon.snap_trap_turns_remaining > 0:
+            availability = " - piégé, switch impossible"
         else:
             valid_indexes.add(action_index)
             availability = ""
@@ -82,6 +92,33 @@ def _display_action_result(battle_field, action, result):
         print(f"{action['side']} switch vers {action['pokemon'].name}")
         return
 
+    if action["type"] == "leech_seed_residual":
+        print(
+            f"Vampigraine retire {result['drained']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        if result["healed"]:
+            print(
+                f"{result['recipient_name']} récupère "
+                f"{result['healed']} PV."
+            )
+        return
+
+    if action["type"] == "snap_trap_residual":
+        print(
+            f"Troquenard retire {result['damage']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        if result["turns_remaining"] == 0:
+            print(f"{action['pokemon'].name} n'est plus piégé.")
+        if action["pokemon"].current_hp == 0:
+            print(f"{action['pokemon'].name} est K.O.")
+        return
+
+    if result.get("charging"):
+        print(f"{action['pokemon'].name} concentre la lumière pour {action['move'].name}.")
+        return
+
     target_side = "opponent" if action["side"] == "player" else "player"
     target_pokemon = (
         battle_field.opponent_active_pokemon
@@ -89,32 +126,91 @@ def _display_action_result(battle_field, action, result):
         else battle_field.player_active_pokemon
     )
     if result.get("unable_to_act"):
-        print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
+        if result.get("flinched"):
+            print(f"{action['pokemon'].name} est apeuré et ne peut pas agir.")
+        else:
+            print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
     elif result.get("fainted"):
         print(f"{action['pokemon'].name} est K.O. et ne peut pas agir.")
     elif not result["hit"]:
         print(f"{action['pokemon'].name} rate {action['move'].name}.")
     elif result["immune"]:
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
-    elif result["effect"] and "applied" in result["effect"]:
-        effect = result["effect"]
-        if effect["applied"]:
-            sleep_turns = effect["sleep_turns"]
-            duration_label = "tour" if sleep_turns == 1 else "tours"
-            print(
-                f"{target_pokemon.name} s'endort pour "
-                f"{sleep_turns} {duration_label}."
-            )
-        else:
-            print(f"{target_pokemon.name} est déjà affecté par un statut.")
     else:
-        print(
-            f"{action['pokemon'].name} utilise {action['move'].name} "
-            f"et inflige {result['damage']} dégâts. "
-            f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
-        )
-        if target_pokemon.current_hp == 0:
-            print(f"{target_pokemon.name} est K.O.")
+        effect = result["effect"]
+        if effect and "status" in effect:
+            if effect["applied"]:
+                sleep_turns = effect["sleep_turns"]
+                duration_label = "tour" if sleep_turns == 1 else "tours"
+                print(
+                    f"{target_pokemon.name} s'endort pour "
+                    f"{sleep_turns} {duration_label}."
+                )
+            else:
+                print(f"{target_pokemon.name} est déjà affecté par un statut.")
+        else:
+            hit_count = result.get("hits", 1)
+            hit_description = f"et touche {hit_count} fois " if hit_count > 1 else ""
+            print(
+                f"{action['pokemon'].name} utilise {action['move'].name} "
+                f"{hit_description}et "
+                f"inflige {result['damage']} dégâts. "
+                f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
+            )
+            if target_pokemon.current_hp == 0:
+                print(f"{target_pokemon.name} est K.O.")
+
+            if effect and effect.get("stat") in ("attack", "defense", "speed"):
+                recipient = (
+                    action["pokemon"]
+                    if effect.get("recipient") == "user"
+                    else target_pokemon
+                )
+                stat_name = {
+                    "attack": "L'Attaque",
+                    "defense": "La Défense",
+                    "speed": "La Vitesse",
+                }[effect["stat"]]
+                if effect["applied"]:
+                    change = "augmente" if effect["stages"] > 0 else "baisse"
+                    print(f"{stat_name} de {recipient.name} {change} d'un cran.")
+                else:
+                    limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
+                    print(f"{stat_name} de {recipient.name} ne peut pas {limit} davantage.")
+            if effect and "healed" in effect:
+                print(
+                    f"{action['pokemon'].name} récupère "
+                    f"{effect['healed']} PV."
+                )
+            if effect and "recoil" in effect:
+                print(
+                    f"{action['pokemon'].name} perd "
+                    f"{effect['recoil']} PV à cause du contrecoup. "
+                    f"PV restants : {action['pokemon'].current_hp}"
+                )
+                if action["pokemon"].current_hp == 0:
+                    print(f"{action['pokemon'].name} est K.O.")
+            if effect and effect.get("flinched"):
+                print(f"{target_pokemon.name} est apeuré.")
+            elif effect and effect.get("reason") == "target_already_acted":
+                print(
+                    f"{target_pokemon.name} a déjà agi et ne peut pas être apeuré."
+                )
+            if effect and effect.get("condition") == "leech_seed":
+                if effect["applied"]:
+                    print(f"{target_pokemon.name} est couvert par Vampigraine.")
+                elif effect["reason"] == "already_seeded":
+                    print(f"{target_pokemon.name} est déjà couvert par Vampigraine.")
+                elif effect["reason"] == "target_fainted":
+                    print(f"{target_pokemon.name} est K.O. et ne peut pas être couvert par Vampigraine.")
+            if effect and effect.get("condition") == "snap_trap":
+                if effect["applied"]:
+                    print(
+                        f"{target_pokemon.name} est piégé par Troquenard "
+                        f"pour {effect['turns']} tours."
+                    )
+                elif effect["reason"] == "target_fainted":
+                    print(f"{target_pokemon.name} est K.O. et ne peut pas être piégé.")
 
 
 def _announce_winner(battle_field):
@@ -159,10 +255,18 @@ def main():
     battle_field = field.Field()
     player_pokemon = pokemon.Pokemon("Charizard", "Mega Charizard X")
     player_bench_pokemon = pokemon.Pokemon("Pikachu")
+    player_seed_pokemon = pokemon.Pokemon("Bulbasaur")
+    player_grassy_pokemon = pokemon.Pokemon("Bulbasaur")
+    player_wood_hammer_pokemon = pokemon.Pokemon("Bulbasaur")
+    player_ivy_cudgel_pokemon = pokemon.Pokemon("Bulbasaur")
     opponent_pokemon = pokemon.Pokemon("Greninja")
     opponent_bench_pokemon = pokemon.Pokemon("Eevee")
     battle_field.add_pokemon(player_pokemon, "player")
     battle_field.add_pokemon(player_bench_pokemon, "player")
+    battle_field.add_pokemon(player_seed_pokemon, "player")
+    battle_field.add_pokemon(player_grassy_pokemon, "player")
+    battle_field.add_pokemon(player_wood_hammer_pokemon, "player")
+    battle_field.add_pokemon(player_ivy_cudgel_pokemon, "player")
     battle_field.add_pokemon(opponent_pokemon, "opponent")
     battle_field.add_pokemon(opponent_bench_pokemon, "opponent")
 
@@ -178,8 +282,32 @@ def main():
     print(f"Player's Pokemon: {player_pokemon.name}, Type: {player_pokemon.type}, Stats: {player_pokemon.stats}")
     print(f"Opponent's Pokemon: {opponent_pokemon.name}, Type: {opponent_pokemon.type}, Stats: {opponent_pokemon.stats}")
 
+    #Un pokémon a 4 attaques maximum, on les ajoute ici pour le test
     player_pokemon.add_move(Tackle())
     player_pokemon.add_move(Spore())
+    player_pokemon.add_move(BulletSeed())
+    player_pokemon.add_move(TropKick())
+    player_bench_pokemon.add_move(SeedBomb())
+    player_bench_pokemon.add_move(Trailblaze())
+    player_bench_pokemon.add_move(HornLeech())
+    player_bench_pokemon.add_move(LeechSeed())
+    player_seed_pokemon.add_move(SappySeed())
+    player_seed_pokemon.add_move(Leafage())
+    player_seed_pokemon.add_move(GravApple())
+    player_seed_pokemon.add_move(VineWhip())
+    player_grassy_pokemon.add_move(GrassyGlide())
+    player_grassy_pokemon.add_move(LeafBlade())
+    player_grassy_pokemon.add_move(SolarBlade())
+    player_grassy_pokemon.add_move(FlowerTrick())
+    player_wood_hammer_pokemon.add_move(WoodHammer())
+    player_wood_hammer_pokemon.add_move(BranchPoke())
+    player_wood_hammer_pokemon.add_move(PetalBlizzard())
+    player_wood_hammer_pokemon.add_move(RazorLeaf())
+    player_wood_hammer_pokemon.add_move(SnapTrap())
+    player_ivy_cudgel_pokemon.add_move(IvyCudgel())
+    player_ivy_cudgel_pokemon.add_move(PowerWhip())
+    player_ivy_cudgel_pokemon.add_move(NeedleArm())
+    player_ivy_cudgel_pokemon.add_move(DrumBeating())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     attack = battle_field.player_active_pokemon.moves[0]

@@ -26,6 +26,7 @@ class Field:
 
         self.weather = None
         self.terrain = None
+        self.gravity_active = False
 
     @property
     def player_team(self):
@@ -82,6 +83,11 @@ class Field:
         for pokemon in self._player_team + self._opponent_team:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
+            pokemon.charging_move = None
+            pokemon.leech_seeded = False
+            pokemon.snap_trap_turns_remaining = 0
+            pokemon.flinched = False
+            pokemon.has_acted_this_turn = False
 
     def switch_pokemon(self, side, team_index):
         """Make a team member active and return it.
@@ -97,6 +103,16 @@ class Field:
         if team_index == self._get_active_index(side):
             raise ValueError("Ce Pokémon est déjà actif.")
 
+        outgoing_pokemon = self._get_active_pokemon(side)
+        if outgoing_pokemon is not None:
+            if (
+                outgoing_pokemon.current_hp > 0
+                and outgoing_pokemon.snap_trap_turns_remaining > 0
+            ):
+                raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
+            outgoing_pokemon.leech_seeded = False
+            outgoing_pokemon.snap_trap_turns_remaining = 0
+            outgoing_pokemon.charging_move = None
         self._set_active_index(side, team_index)
         return team[team_index]
 
@@ -147,19 +163,26 @@ class Field:
         if isinstance(action_index, int) and 0 <= action_index < 4:
             if action_index >= len(active_pokemon.moves):
                 raise ValueError(f"Aucune attaque à l'index {action_index} pour le Pokémon actif.")
-            selected_move = active_pokemon.moves[action_index]
-            if selected_move.pp <= 0:
+            selected_move = active_pokemon.charging_move or active_pokemon.moves[action_index]
+            if active_pokemon.charging_move is None and selected_move.pp <= 0:
                 raise ValueError(f"{selected_move.name} n'a plus de PP et ne peut pas être sélectionnée.")
+            opposing_side = "opponent" if side == "player" else "player"
+            target = self._get_active_pokemon(opposing_side)
             return {
                 "side": side,
                 "type": "move",
                 "pokemon": active_pokemon,
                 "move": selected_move,
-                "priority": selected_move.priority,
+                "priority": selected_move.get_priority(active_pokemon, target, self),
             }
 
         if isinstance(action_index, int) and action_index > 4:
             team_index = action_index - self.SWITCH_INDEX_OFFSET
+            if (
+                active_pokemon.current_hp > 0
+                and active_pokemon.snap_trap_turns_remaining > 0
+            ):
+                raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
             if not 0 <= team_index < len(team):
                 raise ValueError(f"L'index de switch {action_index} ne désigne aucun Pokémon de l'équipe.")
             selected_pokemon = team[team_index]
@@ -211,6 +234,9 @@ class Field:
 
     def resolve_turn(self, player_action_index, opponent_action_index):
         """Resolve both sides' actions in order, then advance the turn counter."""
+        for pokemon in self._player_team + self._opponent_team:
+            pokemon.has_acted_this_turn = False
+
         resolved_actions = self.determine_attack_order(
             player_action_index,
             opponent_action_index,
@@ -235,10 +261,85 @@ class Field:
                 result = self.resolve_move(action["side"], action["move"])
 
             turn_results.append({"action": action, "result": result})
+            for pokemon in self._get_team(action["side"]):
+                pokemon.has_acted_this_turn = True
 
+        for pokemon in self._player_team + self._opponent_team:
+            pokemon.flinched = False
+            pokemon.has_acted_this_turn = False
         if len(turn_results) == 2:
             self.turn_number += 1
+            turn_results.extend(self._apply_leech_seed())
+            turn_results.extend(self._apply_snap_trap())
         return turn_results
+
+    def _apply_snap_trap(self):
+        """Damage and count down active Snap Trap effects at turn end."""
+        residual_results = []
+        for side in ("player", "opponent"):
+            trapped_pokemon = self._get_active_pokemon(side)
+            if (
+                trapped_pokemon is None
+                or trapped_pokemon.current_hp <= 0
+                or trapped_pokemon.snap_trap_turns_remaining <= 0
+            ):
+                continue
+
+            damage = min(
+                max(1, trapped_pokemon.max_hp // 8),
+                trapped_pokemon.current_hp,
+            )
+            trapped_pokemon.current_hp -= damage
+            trapped_pokemon.snap_trap_turns_remaining -= 1
+            turns_remaining = trapped_pokemon.snap_trap_turns_remaining
+            if turns_remaining == 0:
+                trapped_pokemon.snap_trap_turns_remaining = 0
+
+            residual_results.append({
+                "action": {
+                    "type": "snap_trap_residual",
+                    "side": side,
+                    "pokemon": trapped_pokemon,
+                },
+                "result": {
+                    "damage": damage,
+                    "turns_remaining": turns_remaining,
+                },
+            })
+        return residual_results
+
+    def _apply_leech_seed(self):
+        """Drain seeded active Pokémon and heal the active Pokémon on the other side."""
+        residual_results = []
+        for target_side in ("player", "opponent"):
+            target = self._get_active_pokemon(target_side)
+            if target is None or not target.leech_seeded or target.current_hp <= 0:
+                continue
+
+            drain_amount = max(1, target.max_hp // 8)
+            drained = min(drain_amount, target.current_hp)
+            target.current_hp -= drained
+
+            recipient_side = "opponent" if target_side == "player" else "player"
+            recipient = self._get_active_pokemon(recipient_side)
+            healed = 0
+            if recipient is not None and recipient.current_hp > 0:
+                healed = min(drained, recipient.max_hp - recipient.current_hp)
+                recipient.current_hp += healed
+
+            residual_results.append({
+                "action": {
+                    "type": "leech_seed_residual",
+                    "side": target_side,
+                    "pokemon": target,
+                },
+                "result": {
+                    "drained": drained,
+                    "healed": healed,
+                    "recipient_name": recipient.name if recipient is not None else None,
+                },
+            })
+        return residual_results
 
     @staticmethod
     def _stage_multiplier(stage):
@@ -259,22 +360,25 @@ class Field:
             return True
         return random.random() * 100 < max(0, hit_chance)
 
-    def calculate_move_effectiveness(self, move, defender):
+    def calculate_move_effectiveness(self, move, defender, attacker=None):
         """Multiply type effectiveness across all of the defender's types."""
+        move_type = move.get_type(attacker, defender, self)
         effectiveness = 1.0
         for defending_type in defender.type:
-            effectiveness *= self.calculate_type_effectiveness(move.type, defending_type)
+            effectiveness *= self.calculate_type_effectiveness(move_type, defending_type)
         return effectiveness
 
-    def is_immune_to_move(self, move, defender):
+    def is_immune_to_move(self, move, defender, attacker=None):
         """Return whether type matchup or powder immunity prevents a move."""
         if move.powder and Type.GRASS in defender.type:
             return True
-        return self.calculate_move_effectiveness(move, defender) == 0
+        if move.grass_type_immune and Type.GRASS in defender.type:
+            return True
+        return self.calculate_move_effectiveness(move, defender, attacker) == 0
 
     def calculate_stab_multiplier(self, attacker, move):
         """Return the same-type attack bonus multiplier for this attacker and move."""
-        return 1.5 if move.type in attacker.type else 1.0
+        return 1.5 if move.get_type(attacker, field=self) in attacker.type else 1.0
 
     def calculate_critical_hit_multiplier(self, attacker, defender, move):
         """Roll for a critical hit and return its damage multiplier.
@@ -285,7 +389,12 @@ class Field:
         ignore attack drops and defense boosts for the stat pair used by the
         move, by reversing those stat-stage multipliers.
         """
-        critical_stage = max(1, 1 + attacker.stat_modifiers["critical_hit"])
+        critical_stage = max(
+            1,
+            1
+            + attacker.stat_modifiers["critical_hit"]
+            + move.get_critical_hit_stage_bonus(attacker, defender, self),
+        )
         if critical_stage == 1:
             critical_chance = 1 / 24
         elif critical_stage == 2:
@@ -321,7 +430,7 @@ class Field:
     def calculate_damage_modifiers(self, attacker, defender, move):
         """Combine type effectiveness, STAB, and the critical-hit multiplier."""
         return (
-            self.calculate_move_effectiveness(move, defender)
+            self.calculate_move_effectiveness(move, defender, attacker)
             * self.calculate_stab_multiplier(attacker, move)
             * self.calculate_critical_hit_multiplier(attacker, defender, move)
         )
@@ -344,7 +453,7 @@ class Field:
         else:
             raise ValueError(f"Catégorie d'attaque inconnue : {move.category}")
 
-        power = move.get_power(attacker, defender)
+        power = move.get_power(attacker, defender, self)
         base_damage = math.floor(attacker.level * 0.4 + 2)
         base_damage = math.floor(base_damage * attack_stat * power / defense_stat)
         base_damage = math.floor(base_damage / 50) + 2
@@ -365,7 +474,20 @@ class Field:
         defender = self._get_active_pokemon(opponent_side)
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        if attacker.flinched:
+            attacker.flinched = False
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "unable_to_act": True,
+                "flinched": True,
+            }
         if attacker.status_condition is STATUS_CONDITION.SLEEP:
+            if attacker.charging_move is move:
+                attacker.charging_move = None
             attacker.sleep_turns_remaining -= 1
             if attacker.sleep_turns_remaining <= 0:
                 attacker.sleep_turns_remaining = 0
@@ -377,26 +499,51 @@ class Field:
                 "effect": None,
                 "unable_to_act": True,
             }
-        if move.pp <= 0:
+        is_releasing_charge = attacker.charging_move is move
+        if not is_releasing_charge and move.pp <= 0:
             raise ValueError(f"{move.name} n'a plus de PP et ne peut pas être utilisée.")
 
-        move.consume_pp()
-        if not self.attack_hits(attacker, defender, move):
-            return {"hit": False, "immune": False, "damage": 0, "effect": None}
+        if is_releasing_charge:
+            attacker.charging_move = None
+        else:
+            move.consume_pp()
+            if move.requires_charge(self):
+                attacker.charging_move = move
+                return {
+                    "hit": True,
+                    "immune": False,
+                    "damage": 0,
+                    "effect": None,
+                    "charging": True,
+                }
 
-        if self.is_immune_to_move(move, defender):
-            return {"hit": True, "immune": True, "damage": 0, "effect": None}
+        if not self.attack_hits(attacker, defender, move):
+            return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
+
+        if self.is_immune_to_move(move, defender, attacker):
+            return {"hit": True, "immune": True, "damage": 0, "effect": None, "hits": 0}
 
         attacker.calculateStats()
         defender.calculateStats()
-        damage = self.calculate_damage(attacker, defender, move)
-        defender.current_hp = max(0, defender.current_hp - damage)
-        effect = move.effect(attacker, defender)
+        damage = 0
+        damage_dealt = 0
+        hits = 0
+        for _ in range(move.get_hit_count(attacker, defender)):
+            if defender.current_hp <= 0:
+                break
+            hit_damage = self.calculate_damage(attacker, defender, move)
+            damage += hit_damage
+            damage_dealt += min(hit_damage, defender.current_hp)
+            defender.current_hp = max(0, defender.current_hp - hit_damage)
+            hits += 1
+
+        effect = move.apply_effect(attacker, defender, damage_dealt)
         return {
             "hit": True,
             "immune": False,
             "damage": damage,
             "effect": effect,
+            "hits": hits,
         }
 
     @staticmethod
