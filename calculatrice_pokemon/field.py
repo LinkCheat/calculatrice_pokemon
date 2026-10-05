@@ -4,6 +4,7 @@ import random
 from enums.weather import Weather
 from enums.terrain import Terrain
 from enums.move_category import MoveCategory
+from enums.status_condition import STATUS_CONDITION
 from enums.type import Type
 from enums.type_chart import TypeChart
 
@@ -21,6 +22,7 @@ class Field:
         self._opponent_active_index = None
         self.player_action_index = None
         self.opponent_action_index = None
+        self.turn_number = 0
 
         self.weather = None
         self.terrain = None
@@ -44,6 +46,21 @@ class Field:
     def opponent_active_pokemon(self):
         """Return the opponent's active Pokémon, or None if the team is empty."""
         return self._get_active_pokemon("opponent")
+
+    def has_living_pokemon(self, side):
+        """Return whether the selected side has at least one Pokémon above zero HP."""
+        return any(pokemon.current_hp > 0 for pokemon in self._get_team(side))
+
+    def first_living_pokemon_index(self, side):
+        """Return the first living team index, or None if the side has none."""
+        return next(
+            (
+                index
+                for index, pokemon in enumerate(self._get_team(side))
+                if pokemon.current_hp > 0
+            ),
+            None,
+        )
 
     def add_pokemon(self, pokemon, side):
         """Add a Pokémon to a side and make it active if it is that side's first.
@@ -75,6 +92,8 @@ class Field:
         team = self._get_team(side)
         if not isinstance(team_index, int) or not 0 <= team_index < len(team):
             raise ValueError("L'index du Pokémon à sélectionner est invalide.")
+        if team[team_index].current_hp <= 0:
+            raise ValueError("Impossible de switcher vers un Pokémon K.O.")
         if team_index == self._get_active_index(side):
             raise ValueError("Ce Pokémon est déjà actif.")
 
@@ -143,6 +162,9 @@ class Field:
             team_index = action_index - self.SWITCH_INDEX_OFFSET
             if not 0 <= team_index < len(team):
                 raise ValueError(f"L'index de switch {action_index} ne désigne aucun Pokémon de l'équipe.")
+            selected_pokemon = team[team_index]
+            if selected_pokemon.current_hp <= 0:
+                raise ValueError("Impossible de switcher vers un Pokémon K.O.")
             if team_index == self._get_active_index(side):
                 raise ValueError("Impossible de switcher vers le Pokémon déjà actif.")
             return {
@@ -187,6 +209,37 @@ class Field:
         second_side = "opponent" if first_side == "player" else "player"
         return [actions[first_side], actions[second_side]]
 
+    def resolve_turn(self, player_action_index, opponent_action_index):
+        """Resolve both sides' actions in order, then advance the turn counter."""
+        resolved_actions = self.determine_attack_order(
+            player_action_index,
+            opponent_action_index,
+        )
+        turn_results = []
+        for action in resolved_actions:
+            if not self.has_living_pokemon("player") or not self.has_living_pokemon("opponent"):
+                break
+
+            if action["type"] == "switch":
+                self.switch_pokemon(action["side"], action["team_index"])
+                result = None
+            elif action["pokemon"].current_hp <= 0:
+                result = {
+                    "hit": False,
+                    "immune": False,
+                    "damage": 0,
+                    "effect": None,
+                    "fainted": True,
+                }
+            else:
+                result = self.resolve_move(action["side"], action["move"])
+
+            turn_results.append({"action": action, "result": result})
+
+        if len(turn_results) == 2:
+            self.turn_number += 1
+        return turn_results
+
     @staticmethod
     def _stage_multiplier(stage):
         """Convert an accuracy or evasion stage into its battle multiplier."""
@@ -214,7 +267,9 @@ class Field:
         return effectiveness
 
     def is_immune_to_move(self, move, defender):
-        """Return whether the move has zero type effectiveness against a defender."""
+        """Return whether type matchup or powder immunity prevents a move."""
+        if move.powder and Type.GRASS in defender.type:
+            return True
         return self.calculate_move_effectiveness(move, defender) == 0
 
     def calculate_stab_multiplier(self, attacker, move):
@@ -310,6 +365,18 @@ class Field:
         defender = self._get_active_pokemon(opponent_side)
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        if attacker.status_condition is STATUS_CONDITION.SLEEP:
+            attacker.sleep_turns_remaining -= 1
+            if attacker.sleep_turns_remaining <= 0:
+                attacker.sleep_turns_remaining = 0
+                attacker.status_condition = None
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "unable_to_act": True,
+            }
         if move.pp <= 0:
             raise ValueError(f"{move.name} n'a plus de PP et ne peut pas être utilisée.")
 
@@ -317,8 +384,7 @@ class Field:
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None}
 
-        effectiveness = self.calculate_move_effectiveness(move, defender)
-        if effectiveness == 0:
+        if self.is_immune_to_move(move, defender):
             return {"hit": True, "immune": True, "damage": 0, "effect": None}
 
         attacker.calculateStats()

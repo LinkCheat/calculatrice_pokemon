@@ -55,6 +55,7 @@ class Pokemon:
         }
         
         self.status_condition = None
+        self.sleep_turns_remaining = 0
         self.stat_modifiers = {
             "attack": 0,
             "defense": 0,

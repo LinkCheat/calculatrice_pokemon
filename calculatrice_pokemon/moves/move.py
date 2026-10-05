@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from enums.type import Type
-from enums.move_category import MoveCategory
+import random
+
+try:
+    from enums.type import Type
+    from enums.move_category import MoveCategory
+    from enums.status_condition import STATUS_CONDITION
+except ModuleNotFoundError:
+    from calculatrice_pokemon.enums.type import Type
+    from calculatrice_pokemon.enums.move_category import MoveCategory
+    from calculatrice_pokemon.enums.status_condition import STATUS_CONDITION
 
 
 
@@ -19,6 +27,7 @@ class Moves(ABC):
         max_pp: int = 35,
 
         contact: bool = False,
+        powder: bool = False,
     ):
         """Initialize move metadata and set current PP to the maximum PP.
 
@@ -38,6 +47,7 @@ class Moves(ABC):
         self.pp = max_pp
 
         self.contact = contact
+        self.powder = powder
 
     @abstractmethod
     def effect(self, user, target):
@@ -63,6 +73,26 @@ class Moves(ABC):
     def calculate_damage(self, user, target, standard_damage):
         """Return the calculated damage unchanged unless a subclass overrides it."""
         return standard_damage
+
+    def inflict_sleep(self, target):
+        """Put an unstatused target to sleep for one to three turns."""
+        if target.status_condition is not None:
+            return {
+                "name": self.name,
+                "status": None,
+                "applied": False,
+                "reason": "already_statused",
+            }
+
+        sleep_turns = random.randint(1, 3)
+        target.status_condition = STATUS_CONDITION.SLEEP
+        target.sleep_turns_remaining = sleep_turns
+        return {
+            "name": self.name,
+            "status": STATUS_CONDITION.SLEEP,
+            "applied": True,
+            "sleep_turns": sleep_turns,
+        }
 
     def __str__(self):
         """Format the move name and type for display."""

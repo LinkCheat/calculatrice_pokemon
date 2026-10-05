@@ -1,3 +1,4 @@
-from .tackle import Tackle
+from .normal.tackle import Tackle
+from .grass.spore import Spore
 
-__all__ = ["Tackle"]
+__all__ = ["Tackle", "Spore"]

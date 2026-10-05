@@ -1,17 +1,21 @@
-from enums.nature import Nature
-from enums.type import Type
 
 try:
-    from moves import Tackle
+    from enums.nature import Nature
+    from enums.type import Type
+    from moves import *
+    import field
+    import pokemon
+    import moves.move as move
 except ModuleNotFoundError:
-    from calculatrice_pokemon.moves import Tackle
+    from calculatrice_pokemon.enums.nature import Nature
+    from calculatrice_pokemon.enums.type import Type
+    from calculatrice_pokemon.moves import *
+    import calculatrice_pokemon.field as field
+    import calculatrice_pokemon.pokemon as pokemon
+    import calculatrice_pokemon.moves.move as move
 
-import field
-import pokemon
-import move
 
-
-def input_player_action(battle_field):
+def input_player_action(battle_field, forced_switch=False):
     """Display available player actions and return a valid selected index.
 
     Unusable moves and the currently active Pokémon are displayed but cannot be
@@ -21,19 +25,20 @@ def input_player_action(battle_field):
     valid_indexes = set()
 
     print(f"Actions disponibles pour {active_pokemon.name} :")
-    for move_index, selected_move in enumerate(active_pokemon.moves):
-        if move_index >= pokemon.Pokemon.MAX_MOVES:
-            break
+    if not forced_switch:
+        for move_index, selected_move in enumerate(active_pokemon.moves):
+            if move_index >= pokemon.Pokemon.MAX_MOVES:
+                break
 
-        if selected_move.pp > 0:
-            valid_indexes.add(move_index)
-            availability = ""
-        else:
-            availability = " - inutilisable (0 PP)"
-        print(
-            f"{move_index}: Attaque {selected_move.name} "
-            f"({selected_move.pp}/{selected_move.max_pp} PP){availability}"
-        )
+            if selected_move.pp > 0:
+                valid_indexes.add(move_index)
+                availability = ""
+            else:
+                availability = " - inutilisable (0 PP)"
+            print(
+                f"{move_index}: Attaque {selected_move.name} "
+                f"({selected_move.pp}/{selected_move.max_pp} PP){availability}"
+            )
 
     for team_index in range(battle_field.MAX_TEAM_SIZE):
         action_index = battle_field.SWITCH_INDEX_OFFSET + team_index
@@ -43,17 +48,25 @@ def input_player_action(battle_field):
         selected_pokemon = battle_field.player_team[team_index]
         if selected_pokemon is active_pokemon:
             availability = " - déjà actif"
+        elif selected_pokemon.current_hp <= 0:
+            availability = " - K.O."
         else:
             valid_indexes.add(action_index)
             availability = ""
         print(f"{action_index}: Switch vers {selected_pokemon.name}{availability}")
 
     if not valid_indexes:
+        if forced_switch:
+            raise ValueError("Aucun Pokémon vivant ne peut remplacer le Pokémon K.O.")
         raise ValueError("Aucune action utilisable n'est disponible pour le Pokémon actif.")
 
     while True:
+        user_input = input("Choisissez l'index de votre action (q pour quitter) : ")
+        if user_input.strip().lower() == "q" and not forced_switch:
+            return None
+
         try:
-            action_index = int(input("Choisissez l'index de votre action : "))
+            action_index = int(user_input)
         except ValueError:
             print("Veuillez saisir un nombre entier.")
             continue
@@ -63,63 +76,144 @@ def input_player_action(battle_field):
         print("Cet index ne correspond pas à une action disponible.")
 
 
-battle_field = field.Field()
-player_pokemon = pokemon.Pokemon("Charizard", "Mega Charizard X")
-player_bench_pokemon = pokemon.Pokemon("Pikachu")
-opponent_pokemon = pokemon.Pokemon("Greninja")
-battle_field.add_pokemon(player_pokemon, "player")
-battle_field.add_pokemon(player_bench_pokemon, "player")
-battle_field.add_pokemon(opponent_pokemon, "opponent")
-
-player_pokemon.nature = Nature.MODEST
-opponent_pokemon.nature = Nature.TIMID
-
-player_pokemon.ivs["attack"] = 0
-opponent_pokemon.evs["speed"] = 252
-player_pokemon.stat_modifiers["attack"] = 2
-
-battle_field.initialize_battle()
-
-
-print(f"Player's Pokemon: {player_pokemon.name}, Type: {player_pokemon.type}, Stats: {player_pokemon.stats}")
-print(f"Opponent's Pokemon: {opponent_pokemon.name}, Type: {opponent_pokemon.type}, Stats: {opponent_pokemon.stats}")
-
-# Test : on donne une attaque Charge à un Pokémon, puis on récupère sa catégorie et son type via Moves
-charge = Tackle()
-player_pokemon.add_move(charge)
-opponent_pokemon.add_move(Tackle())
-attack = battle_field.player_active_pokemon.moves[0]
-
-print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")
-print(f"Type de l'attaque : {attack.type}")
-print(f"Catégorie de l'attaque : {attack.category}")
-print(f"L'attaque est bien une instance de Moves : {isinstance(attack, move.Moves)}")
-
-player_action_index = input_player_action(battle_field)
-attack_order = battle_field.determine_attack_order(player_action_index, 0)
-for action in attack_order:
-    if action["type"] == "switch": 
-        battle_field.switch_pokemon(action["side"], action["team_index"])
+def _display_action_result(battle_field, action, result):
+    """Print one switch, successful move, miss, or sleep outcome."""
+    if result is None:
         print(f"{action['side']} switch vers {action['pokemon'].name}")
-    else:
-        result = battle_field.resolve_move(action["side"], action["move"])
-        target_side = "opponent" if action["side"] == "player" else "player"
-        target_pokemon = (
-            battle_field.opponent_active_pokemon
-            if target_side == "opponent"
-            else battle_field.player_active_pokemon
-        )
-        if not result["hit"]:
-            print(f"{action['pokemon'].name} rate {action['move'].name}.")
-        elif result["immune"]:
-            print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
-        else:
-            print(
-                f"{action['pokemon'].name} utilise {action['move'].name} "
-                f"et inflige {result['damage']} dégâts. "
-                f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
-            )
+        return
 
-fire_vs_grass = field.Field.calculate_type_effectiveness(Type.FIRE, Type.GRASS)
-assert fire_vs_grass == 2.0
-print(f"Test de type : Feu contre Plante = x{fire_vs_grass} (attendu : x2)")
+    target_side = "opponent" if action["side"] == "player" else "player"
+    target_pokemon = (
+        battle_field.opponent_active_pokemon
+        if target_side == "opponent"
+        else battle_field.player_active_pokemon
+    )
+    if result.get("unable_to_act"):
+        print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
+    elif result.get("fainted"):
+        print(f"{action['pokemon'].name} est K.O. et ne peut pas agir.")
+    elif not result["hit"]:
+        print(f"{action['pokemon'].name} rate {action['move'].name}.")
+    elif result["immune"]:
+        print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
+    elif result["effect"] and "applied" in result["effect"]:
+        effect = result["effect"]
+        if effect["applied"]:
+            sleep_turns = effect["sleep_turns"]
+            duration_label = "tour" if sleep_turns == 1 else "tours"
+            print(
+                f"{target_pokemon.name} s'endort pour "
+                f"{sleep_turns} {duration_label}."
+            )
+        else:
+            print(f"{target_pokemon.name} est déjà affecté par un statut.")
+    else:
+        print(
+            f"{action['pokemon'].name} utilise {action['move'].name} "
+            f"et inflige {result['damage']} dégâts. "
+            f"PV restants de {target_pokemon.name} : {target_pokemon.current_hp}"
+        )
+        if target_pokemon.current_hp == 0:
+            print(f"{target_pokemon.name} est K.O.")
+
+
+def _announce_winner(battle_field):
+    """Announce the winner and return whether the battle has ended."""
+    player_has_living = battle_field.has_living_pokemon("player")
+    opponent_has_living = battle_field.has_living_pokemon("opponent")
+    if player_has_living and opponent_has_living:
+        return False
+
+    if player_has_living:
+        print("Tous les Pokémon adverses sont K.O. Le joueur gagne !")
+    elif opponent_has_living:
+        print("Tous les Pokémon du joueur sont K.O. L'adversaire gagne !")
+    else:
+        print("Tous les Pokémon des deux équipes sont K.O. Le combat est nul.")
+    return True
+
+
+def _replace_fainted_pokemon(battle_field, side):
+    """Replace a fainted active Pokémon with a living teammate."""
+    active_pokemon = (
+        battle_field.player_active_pokemon
+        if side == "player"
+        else battle_field.opponent_active_pokemon
+    )
+    if active_pokemon.current_hp > 0:
+        return
+
+    if side == "player":
+        print("Votre Pokémon est K.O. Choisissez un remplaçant.")
+        action_index = input_player_action(battle_field, forced_switch=True)
+        team_index = action_index - battle_field.SWITCH_INDEX_OFFSET
+    else:
+        team_index = battle_field.first_living_pokemon_index(side)
+        print(f"L'adversaire envoie {battle_field.opponent_team[team_index].name}.")
+
+    battle_field.switch_pokemon(side, team_index)
+
+
+def main():
+    """Run the interactive battle one complete two-sided turn at a time."""
+    battle_field = field.Field()
+    player_pokemon = pokemon.Pokemon("Charizard", "Mega Charizard X")
+    player_bench_pokemon = pokemon.Pokemon("Pikachu")
+    opponent_pokemon = pokemon.Pokemon("Greninja")
+    opponent_bench_pokemon = pokemon.Pokemon("Eevee")
+    battle_field.add_pokemon(player_pokemon, "player")
+    battle_field.add_pokemon(player_bench_pokemon, "player")
+    battle_field.add_pokemon(opponent_pokemon, "opponent")
+    battle_field.add_pokemon(opponent_bench_pokemon, "opponent")
+
+    player_pokemon.nature = Nature.MODEST
+    opponent_pokemon.nature = Nature.TIMID
+
+    player_pokemon.ivs["attack"] = 0
+    opponent_pokemon.evs["speed"] = 252
+    player_pokemon.stat_modifiers["attack"] = 2
+
+    battle_field.initialize_battle()
+
+    print(f"Player's Pokemon: {player_pokemon.name}, Type: {player_pokemon.type}, Stats: {player_pokemon.stats}")
+    print(f"Opponent's Pokemon: {opponent_pokemon.name}, Type: {opponent_pokemon.type}, Stats: {opponent_pokemon.stats}")
+
+    player_pokemon.add_move(Tackle())
+    player_pokemon.add_move(Spore())
+    opponent_pokemon.add_move(Tackle())
+    opponent_bench_pokemon.add_move(Tackle())
+    attack = battle_field.player_active_pokemon.moves[0]
+
+    print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")
+    print(f"Type de l'attaque : {attack.type}")
+    print(f"Catégorie de l'attaque : {attack.category}")
+    print(f"L'attaque est bien une instance de Moves : {isinstance(attack, move.Moves)}")
+
+    while True:
+        print(f"\nTour {battle_field.turn_number + 1}")
+        player_action_index = input_player_action(battle_field)
+        if player_action_index is None:
+            print("Combat terminé.")
+            break
+
+        turn_results = battle_field.resolve_turn(player_action_index, 0)
+        for turn_result in turn_results:
+            _display_action_result(
+                battle_field,
+                turn_result["action"],
+                turn_result["result"],
+            )
+        if _announce_winner(battle_field):
+            break
+
+        _replace_fainted_pokemon(battle_field, "player")
+        _replace_fainted_pokemon(battle_field, "opponent")
+        print(f"Fin du tour {battle_field.turn_number}.")
+
+    fire_vs_grass = field.Field.calculate_type_effectiveness(Type.FIRE, Type.GRASS)
+    assert fire_vs_grass == 2.0
+    print(f"Test de type : Feu contre Plante = x{fire_vs_grass} (attendu : x2)")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,7 @@
 try:
-    from move import Moves
+    from calculatrice_pokemon.moves.move import Moves
 except ModuleNotFoundError:
-    from calculatrice_pokemon.move import Moves
+    from ..move import Moves
 
 try:
     from enums.type import Type
