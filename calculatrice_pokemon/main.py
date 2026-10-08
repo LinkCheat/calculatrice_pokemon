@@ -160,7 +160,7 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") in ("attack", "defense", "speed"):
+            if effect and effect.get("stat") in ("attack", "defense", "sp_def", "speed"):
                 recipient = (
                     action["pokemon"]
                     if effect.get("recipient") == "user"
@@ -169,6 +169,7 @@ def _display_action_result(battle_field, action, result):
                 stat_name = {
                     "attack": "L'Attaque",
                     "defense": "La Défense",
+                    "sp_def": "La Défense Spéciale",
                     "speed": "La Vitesse",
                 }[effect["stat"]]
                 if effect["applied"]:
@@ -310,6 +311,7 @@ def main():
     player_ivy_cudgel_pokemon.add_move(DrumBeating())
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
+    opponent_bench_pokemon.add_move(AppleAcid())
     attack = battle_field.player_active_pokemon.moves[0]
 
     print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")
