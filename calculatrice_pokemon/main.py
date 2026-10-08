@@ -345,6 +345,7 @@ def main():
     opponent_pokemon.add_move(PetalDance())
     opponent_pokemon.add_move(Tackle())
     opponent_pokemon.add_move(EnergyBall())
+    opponent_pokemon.add_move(MagicalLeaf())
     opponent_bench_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(AppleAcid())
     opponent_bench_pokemon.add_move(GrassPledge())
