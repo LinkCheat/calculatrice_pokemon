@@ -344,11 +344,11 @@ def main():
     player_ivy_cudgel_pokemon.add_move(DrumBeating())
     opponent_pokemon.add_move(PetalDance())
     opponent_pokemon.add_move(Tackle())
+    opponent_pokemon.add_move(EnergyBall())
     opponent_bench_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(AppleAcid())
     opponent_bench_pokemon.add_move(GrassPledge())
     opponent_bench_pokemon.add_move(SyrupBomb())
-    opponent_pokemon.add_move(PetalDance())
     attack = battle_field.player_active_pokemon.moves[0]
 
     print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")
