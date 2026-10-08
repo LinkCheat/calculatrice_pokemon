@@ -115,6 +115,15 @@ def _display_action_result(battle_field, action, result):
             print(f"{action['pokemon'].name} est K.O.")
         return
 
+    if action["type"] == "syrup_bomb_residual":
+        if result["applied"]:
+            print(f"La Vitesse de {action['pokemon'].name} baisse d'un cran (Sirotage).")
+        else:
+            print(f"La Vitesse de {action['pokemon'].name} ne peut plus baisser.")
+        if result["turns_remaining"] == 0:
+            print(f"L'effet de Sirotage prend fin pour {action['pokemon'].name}.")
+        return
+
     if result.get("charging"):
         print(f"{action['pokemon'].name} concentre la lumière pour {action['move'].name}.")
         return
@@ -212,6 +221,15 @@ def _display_action_result(battle_field, action, result):
                     )
                 elif effect["reason"] == "target_fainted":
                     print(f"{target_pokemon.name} est K.O. et ne peut pas être piégé.")
+            if effect and effect.get("condition") == "syrupy":
+                if effect["applied"]:
+                    print(
+                        f"{target_pokemon.name} est couvert de sirop : "
+                        f"sa Vitesse baissera d'un cran à la fin de chacun "
+                        f"des {effect['turns']} prochains tours."
+                    )
+                elif effect["reason"] == "target_fainted":
+                    print(f"{target_pokemon.name} est K.O. et n'est pas affecté par le sirop.")
 
 
 def _announce_winner(battle_field):
@@ -313,6 +331,7 @@ def main():
     opponent_bench_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(AppleAcid())
     opponent_bench_pokemon.add_move(GrassPledge())
+    opponent_bench_pokemon.add_move(SyrupBomb())
     attack = battle_field.player_active_pokemon.moves[0]
 
     print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")

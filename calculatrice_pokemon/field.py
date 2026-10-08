@@ -86,6 +86,8 @@ class Field:
             pokemon.charging_move = None
             pokemon.leech_seeded = False
             pokemon.snap_trap_turns_remaining = 0
+            pokemon.syrupy_turns_remaining = 0
+            pokemon.syrupy_skip_next_tick = False
             pokemon.flinched = False
             pokemon.has_acted_this_turn = False
 
@@ -112,6 +114,8 @@ class Field:
                 raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
             outgoing_pokemon.leech_seeded = False
             outgoing_pokemon.snap_trap_turns_remaining = 0
+            outgoing_pokemon.syrupy_turns_remaining = 0
+            outgoing_pokemon.syrupy_skip_next_tick = False
             outgoing_pokemon.charging_move = None
         self._set_active_index(side, team_index)
         return team[team_index]
@@ -271,7 +275,44 @@ class Field:
             self.turn_number += 1
             turn_results.extend(self._apply_leech_seed())
             turn_results.extend(self._apply_snap_trap())
+            turn_results.extend(self._apply_syrup_bomb())
         return turn_results
+
+    def _apply_syrup_bomb(self):
+        """Lower active targets' Speed and count down Syrup Bomb effects."""
+        residual_results = []
+        for side in ("player", "opponent"):
+            target = self._get_active_pokemon(side)
+            if (
+                target is None
+                or target.current_hp <= 0
+                or target.syrupy_turns_remaining <= 0
+            ):
+                continue
+
+            if target.syrupy_skip_next_tick:
+                target.syrupy_skip_next_tick = False
+                continue
+
+            applied = target.stat_modifiers["speed"] > -6
+            if applied:
+                target.stat_modifiers["speed"] -= 1
+
+            target.syrupy_turns_remaining -= 1
+            residual_results.append({
+                "action": {
+                    "type": "syrup_bomb_residual",
+                    "side": side,
+                    "pokemon": target,
+                },
+                "result": {
+                    "stat": "speed",
+                    "stages": -1 if applied else 0,
+                    "applied": applied,
+                    "turns_remaining": target.syrupy_turns_remaining,
+                },
+            })
+        return residual_results
 
     def _apply_snap_trap(self):
         """Damage and count down active Snap Trap effects at turn end."""
