@@ -312,6 +312,7 @@ def main():
     opponent_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(Tackle())
     opponent_bench_pokemon.add_move(AppleAcid())
+    opponent_bench_pokemon.add_move(GrassPledge())
     attack = battle_field.player_active_pokemon.moves[0]
 
     print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")
