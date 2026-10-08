@@ -23,5 +23,14 @@ from .grass.branch_poke import BranchPoke
 from .grass.petal_blizzard import PetalBlizzard
 from .grass.razor_leaf import RazorLeaf
 from .grass.snap_trap import SnapTrap
+from .grass.apple_acid import AppleAcid
+from .grass.grass_pledge import GrassPledge
+from .grass.syrup_bomb import SyrupBomb
+from .grass.petal_dance import PetalDance
+from .grass.energy_ball import EnergyBall
+from .grass.magical_leaf import MagicalLeaf
+from .grass.seed_flare import SeedFlare
+from .grass.giga_drain import GigaDrain
+from .grass.chloroblast import Chloroblast
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap"]
+__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid", "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf", "SeedFlare", "GigaDrain", "Chloroblast"]

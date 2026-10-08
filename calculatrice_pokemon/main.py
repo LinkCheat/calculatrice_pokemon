@@ -26,13 +26,17 @@ def input_player_action(battle_field, forced_switch=False):
 
     print(f"Actions disponibles pour {active_pokemon.name} :")
     if not forced_switch:
-        if active_pokemon.charging_move is not None:
-            move_index = active_pokemon.moves.index(active_pokemon.charging_move)
+        forced_move = active_pokemon.locked_move or active_pokemon.charging_move
+        if forced_move is not None:
+            move_index = active_pokemon.moves.index(forced_move)
             valid_indexes.add(move_index)
-            print(
-                f"{move_index}: Attaque {active_pokemon.charging_move.name} "
-                "(tour de frappe)"
-            )
+            if active_pokemon.locked_move is not None:
+                print(
+                    f"{move_index}: Attaque {forced_move.name} "
+                    f"(encore {active_pokemon.locked_move_turns_remaining} tour(s))"
+                )
+            else:
+                print(f"{move_index}: Attaque {forced_move.name} (tour de frappe)")
         else:
             for move_index, selected_move in enumerate(active_pokemon.moves):
                 if move_index >= pokemon.Pokemon.MAX_MOVES:
@@ -58,6 +62,8 @@ def input_player_action(battle_field, forced_switch=False):
             availability = " - déjà actif"
         elif selected_pokemon.current_hp <= 0:
             availability = " - K.O."
+        elif active_pokemon.current_hp > 0 and active_pokemon.locked_move is not None:
+            availability = " - bloqué sur une capacité"
         elif active_pokemon.current_hp > 0 and active_pokemon.snap_trap_turns_remaining > 0:
             availability = " - piégé, switch impossible"
         else:
@@ -115,6 +121,15 @@ def _display_action_result(battle_field, action, result):
             print(f"{action['pokemon'].name} est K.O.")
         return
 
+    if action["type"] == "syrup_bomb_residual":
+        if result["applied"]:
+            print(f"La Vitesse de {action['pokemon'].name} baisse d'un cran (Sirotage).")
+        else:
+            print(f"La Vitesse de {action['pokemon'].name} ne peut plus baisser.")
+        if result["turns_remaining"] == 0:
+            print(f"L'effet de Sirotage prend fin pour {action['pokemon'].name}.")
+        return
+
     if result.get("charging"):
         print(f"{action['pokemon'].name} concentre la lumière pour {action['move'].name}.")
         return
@@ -128,6 +143,11 @@ def _display_action_result(battle_field, action, result):
     if result.get("unable_to_act"):
         if result.get("flinched"):
             print(f"{action['pokemon'].name} est apeuré et ne peut pas agir.")
+        elif result.get("confusion_self_hit"):
+            print(
+                f"{action['pokemon'].name} est confus et se blesse "
+                f"({result['damage']} dégâts)."
+            )
         else:
             print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
     elif result.get("fainted"):
@@ -160,7 +180,7 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") in ("attack", "defense", "speed"):
+            if effect and effect.get("stat") in ("attack", "defense", "sp_def", "speed"):
                 recipient = (
                     action["pokemon"]
                     if effect.get("recipient") == "user"
@@ -169,11 +189,17 @@ def _display_action_result(battle_field, action, result):
                 stat_name = {
                     "attack": "L'Attaque",
                     "defense": "La Défense",
+                    "sp_def": "La Défense Spéciale",
                     "speed": "La Vitesse",
                 }[effect["stat"]]
                 if effect["applied"]:
                     change = "augmente" if effect["stages"] > 0 else "baisse"
-                    print(f"{stat_name} de {recipient.name} {change} d'un cran.")
+                    stage_count = abs(effect["stages"])
+                    if stage_count == 1:
+                        amount = "d'un cran"
+                    else:
+                        amount = f"de {stage_count} crans"
+                    print(f"{stat_name} de {recipient.name} {change} {amount}.")
                 else:
                     limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
                     print(f"{stat_name} de {recipient.name} ne peut pas {limit} davantage.")
@@ -211,6 +237,19 @@ def _display_action_result(battle_field, action, result):
                     )
                 elif effect["reason"] == "target_fainted":
                     print(f"{target_pokemon.name} est K.O. et ne peut pas être piégé.")
+            if effect and effect.get("condition") == "syrupy":
+                if effect["applied"]:
+                    print(
+                        f"{target_pokemon.name} est couvert de sirop : "
+                        f"sa Vitesse baissera d'un cran à la fin de chacun "
+                        f"des {effect['turns']} prochains tours."
+                    )
+                elif effect["reason"] == "target_fainted":
+                    print(f"{target_pokemon.name} est K.O. et n'est pas affecté par le sirop.")
+
+    if result.get("lock_effect", {}).get("condition") == "confusion":
+        turns = result["lock_effect"]["turns"]
+        print(f"{action['pokemon'].name} devient confus pour {turns} tour(s).")
 
 
 def _announce_winner(battle_field):
@@ -308,8 +347,14 @@ def main():
     player_ivy_cudgel_pokemon.add_move(PowerWhip())
     player_ivy_cudgel_pokemon.add_move(NeedleArm())
     player_ivy_cudgel_pokemon.add_move(DrumBeating())
+    opponent_pokemon.add_move(PetalDance())
     opponent_pokemon.add_move(Tackle())
+    opponent_pokemon.add_move(EnergyBall())
+    opponent_pokemon.add_move(MagicalLeaf())
     opponent_bench_pokemon.add_move(Tackle())
+    opponent_bench_pokemon.add_move(AppleAcid())
+    opponent_bench_pokemon.add_move(GrassPledge())
+    opponent_bench_pokemon.add_move(SyrupBomb())
     attack = battle_field.player_active_pokemon.moves[0]
 
     print(f"Attaque donnée : {attack.name} ({attack.pp}/{attack.max_pp} PP)")
