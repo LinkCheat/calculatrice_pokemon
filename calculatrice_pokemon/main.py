@@ -194,7 +194,12 @@ def _display_action_result(battle_field, action, result):
                 }[effect["stat"]]
                 if effect["applied"]:
                     change = "augmente" if effect["stages"] > 0 else "baisse"
-                    print(f"{stat_name} de {recipient.name} {change} d'un cran.")
+                    stage_count = abs(effect["stages"])
+                    if stage_count == 1:
+                        amount = "d'un cran"
+                    else:
+                        amount = f"de {stage_count} crans"
+                    print(f"{stat_name} de {recipient.name} {change} {amount}.")
                 else:
                     limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
                     print(f"{stat_name} de {recipient.name} ne peut pas {limit} davantage.")
