@@ -57,6 +57,9 @@ class Pokemon:
         self.status_condition = None
         self.sleep_turns_remaining = 0
         self.charging_move = None
+        self.locked_move = None
+        self.locked_move_turns_remaining = 0
+        self.confusion_turns_remaining = 0
         self.leech_seeded = False
         self.snap_trap_turns_remaining = 0
         self.syrupy_turns_remaining = 0

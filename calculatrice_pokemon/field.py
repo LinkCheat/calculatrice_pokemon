@@ -84,6 +84,9 @@ class Field:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
             pokemon.charging_move = None
+            pokemon.locked_move = None
+            pokemon.locked_move_turns_remaining = 0
+            pokemon.confusion_turns_remaining = 0
             pokemon.leech_seeded = False
             pokemon.snap_trap_turns_remaining = 0
             pokemon.syrupy_turns_remaining = 0
@@ -109,6 +112,11 @@ class Field:
         if outgoing_pokemon is not None:
             if (
                 outgoing_pokemon.current_hp > 0
+                and outgoing_pokemon.locked_move is not None
+            ):
+                raise ValueError("Le Pokémon est bloqué sur une capacité et ne peut pas se retirer.")
+            if (
+                outgoing_pokemon.current_hp > 0
                 and outgoing_pokemon.snap_trap_turns_remaining > 0
             ):
                 raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
@@ -117,6 +125,9 @@ class Field:
             outgoing_pokemon.syrupy_turns_remaining = 0
             outgoing_pokemon.syrupy_skip_next_tick = False
             outgoing_pokemon.charging_move = None
+            outgoing_pokemon.locked_move = None
+            outgoing_pokemon.locked_move_turns_remaining = 0
+            outgoing_pokemon.confusion_turns_remaining = 0
         self._set_active_index(side, team_index)
         return team[team_index]
 
@@ -165,10 +176,18 @@ class Field:
             raise ValueError(f"L'équipe {side} ne contient aucun Pokémon.")
 
         if isinstance(action_index, int) and 0 <= action_index < 4:
-            if action_index >= len(active_pokemon.moves):
+            if active_pokemon.locked_move is None and action_index >= len(active_pokemon.moves):
                 raise ValueError(f"Aucune attaque à l'index {action_index} pour le Pokémon actif.")
-            selected_move = active_pokemon.charging_move or active_pokemon.moves[action_index]
-            if active_pokemon.charging_move is None and selected_move.pp <= 0:
+            selected_move = (
+                active_pokemon.locked_move
+                or active_pokemon.charging_move
+                or active_pokemon.moves[action_index]
+            )
+            if (
+                active_pokemon.charging_move is None
+                and active_pokemon.locked_move is None
+                and selected_move.pp <= 0
+            ):
                 raise ValueError(f"{selected_move.name} n'a plus de PP et ne peut pas être sélectionnée.")
             opposing_side = "opponent" if side == "player" else "player"
             target = self._get_active_pokemon(opposing_side)
@@ -182,6 +201,11 @@ class Field:
 
         if isinstance(action_index, int) and action_index > 4:
             team_index = action_index - self.SWITCH_INDEX_OFFSET
+            if (
+                active_pokemon.current_hp > 0
+                and active_pokemon.locked_move is not None
+            ):
+                raise ValueError("Le Pokémon est bloqué sur une capacité et ne peut pas se retirer.")
             if (
                 active_pokemon.current_hp > 0
                 and active_pokemon.snap_trap_turns_remaining > 0
@@ -265,6 +289,17 @@ class Field:
                 result = self.resolve_move(action["side"], action["move"])
 
             turn_results.append({"action": action, "result": result})
+            if (
+                action["type"] == "move"
+                and result is not None
+                and (
+                    not result.get("unable_to_act")
+                    or result.get("confusion_self_hit")
+                )
+            ):
+                lock_effect = self._advance_move_lock(action["pokemon"])
+                if lock_effect is not None:
+                    result["lock_effect"] = lock_effect
             for pokemon in self._get_team(action["side"]):
                 pokemon.has_acted_this_turn = True
 
@@ -313,6 +348,31 @@ class Field:
                 },
             })
         return residual_results
+
+    def _advance_move_lock(self, pokemon):
+        """Count a completed locked turn and apply its end-of-lock effect."""
+        if pokemon.locked_move is None:
+            return
+        if pokemon.current_hp <= 0:
+            pokemon.locked_move = None
+            pokemon.locked_move_turns_remaining = 0
+            return
+
+        pokemon.locked_move_turns_remaining -= 1
+        if pokemon.locked_move_turns_remaining > 0:
+            return
+
+        move = pokemon.locked_move
+        pokemon.locked_move = None
+        pokemon.locked_move_turns_remaining = 0
+        if move.confuses_user_after_lock():
+            pokemon.confusion_turns_remaining = random.randint(1, 4)
+            return {
+                "condition": "confusion",
+                "applied": True,
+                "turns": pokemon.confusion_turns_remaining,
+            }
+        return None
 
     def _apply_snap_trap(self):
         """Damage and count down active Snap Trap effects at turn end."""
@@ -541,12 +601,35 @@ class Field:
                 "unable_to_act": True,
             }
         is_releasing_charge = attacker.charging_move is move
-        if not is_releasing_charge and move.pp <= 0:
+        is_releasing_lock = attacker.locked_move is move
+
+        if attacker.confusion_turns_remaining > 0:
+            attacker.calculateStats()
+            confusion_self_hit = random.random() < 0.33
+            attacker.confusion_turns_remaining -= 1
+            confusion_turns_remaining = attacker.confusion_turns_remaining
+            if confusion_turns_remaining == 0:
+                attacker.confusion_turns_remaining = 0
+            if confusion_self_hit:
+                damage = self.calculate_confusion_damage(attacker)
+                attacker.current_hp = max(0, attacker.current_hp - damage)
+                return {
+                    "hit": False,
+                    "immune": False,
+                    "damage": damage,
+                    "effect": None,
+                    "hits": 0,
+                    "unable_to_act": True,
+                    "confusion_self_hit": True,
+                    "confusion_turns_remaining": confusion_turns_remaining,
+                }
+
+        if not is_releasing_charge and not is_releasing_lock and move.pp <= 0:
             raise ValueError(f"{move.name} n'a plus de PP et ne peut pas être utilisée.")
 
         if is_releasing_charge:
             attacker.charging_move = None
-        else:
+        elif not is_releasing_lock:
             move.consume_pp()
             if move.requires_charge(self):
                 attacker.charging_move = move
@@ -557,6 +640,12 @@ class Field:
                     "effect": None,
                     "charging": True,
                 }
+
+        if not is_releasing_lock and not is_releasing_charge:
+            lock_turn_count = move.get_lock_turn_count(attacker, defender)
+            if lock_turn_count > 1:
+                attacker.locked_move = move
+                attacker.locked_move_turns_remaining = lock_turn_count
 
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
@@ -586,6 +675,14 @@ class Field:
             "effect": effect,
             "hits": hits,
         }
+
+    def calculate_confusion_damage(self, pokemon):
+        """Calculate physical typeless self-damage without a critical hit."""
+        attack = pokemon.stats["attack"]
+        defense = pokemon.stats["defense"]
+        base_damage = math.floor(pokemon.level * 0.4 + 2)
+        base_damage = math.floor(base_damage * 40 * attack / defense)
+        return math.floor(base_damage / 50) + 2
 
     @staticmethod
     def calculate_type_effectiveness(attack_type: Type, defending_type: Type) -> float:

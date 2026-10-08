@@ -92,6 +92,14 @@ class Moves(ABC):
         """Return whether this move needs a charging turn in the current field."""
         return False
 
+    def get_lock_turn_count(self, user, target):
+        """Return the total consecutive turns this move locks its user."""
+        return 1
+
+    def confuses_user_after_lock(self):
+        """Return whether completing this move's lock confuses its user."""
+        return False
+
     def get_hit_count(self, user, target):
         """Return the number of strikes this use of the move makes."""
         return 1
