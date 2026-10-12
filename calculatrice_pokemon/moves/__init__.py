@@ -36,5 +36,6 @@ from .grass.solar_beam import SolarBeam
 from .grass.mega_drain import MegaDrain
 from .grass.matcha_gotcha import MatchaGotcha
 from .grass.grass_knot import GrassKnot
+from .grass.leaf_tornado import LeafTornado
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid", "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf", "SeedFlare", "GigaDrain", "Chloroblast", "SolarBeam", "MegaDrain", "MatchaGotcha", "GrassKnot"]
+__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid", "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf", "SeedFlare", "GigaDrain", "Chloroblast", "SolarBeam", "MegaDrain", "MatchaGotcha", "GrassKnot", "LeafTornado"]

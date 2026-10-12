@@ -189,7 +189,13 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") in ("attack", "defense", "sp_def", "speed"):
+            if effect and effect.get("stat") in (
+                "attack",
+                "defense",
+                "sp_def",
+                "speed",
+                "accuracy",
+            ):
                 recipient = (
                     action["pokemon"]
                     if effect.get("recipient") == "user"
@@ -200,6 +206,7 @@ def _display_action_result(battle_field, action, result):
                     "defense": "La Défense",
                     "sp_def": "La Défense Spéciale",
                     "speed": "La Vitesse",
+                    "accuracy": "La Précision",
                 }[effect["stat"]]
                 if effect["applied"]:
                     change = "augmente" if effect["stages"] > 0 else "baisse"
