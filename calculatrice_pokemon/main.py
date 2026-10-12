@@ -72,6 +72,12 @@ def input_player_action(battle_field, forced_switch=False):
             availability = " - K.O."
         elif active_pokemon.current_hp > 0 and active_pokemon.locked_move is not None:
             availability = " - bloqué sur une capacité"
+        elif (
+            active_pokemon.current_hp > 0
+            and active_pokemon.ingrain_active
+            and Type.GHOST not in active_pokemon.type
+        ):
+            availability = " - enraciné, switch impossible"
         elif active_pokemon.current_hp > 0 and active_pokemon.snap_trap_turns_remaining > 0:
             availability = " - piégé, switch impossible"
         else:
@@ -138,6 +144,13 @@ def _display_action_result(battle_field, action, result):
             print(f"L'effet de Sirotage prend fin pour {action['pokemon'].name}.")
         return
 
+    if action["type"] == "ingrain_residual":
+        print(
+            f"Racines restaure {result['healed']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        return
+
     if action["type"] == "grassy_terrain_residual":
         print(
             f"Champ Herbu restaure {result['healed']} PV à "
@@ -193,7 +206,9 @@ def _display_action_result(battle_field, action, result):
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
     else:
         effect = result["effect"]
-        if effect and effect.get("condition") == "grassy_terrain":
+        if effect and effect.get("condition") == "ingrain":
+            print(f"{action['pokemon'].name} s'enracine avec Racines.")
+        elif effect and effect.get("condition") == "grassy_terrain":
             print(
                 f"{action['pokemon'].name} utilise Champ Herbu. "
                 f"Le terrain restera actif pendant {effect['turns']} tours."

@@ -95,6 +95,7 @@ class Field:
             pokemon.locked_move_turns_remaining = 0
             pokemon.confusion_turns_remaining = 0
             pokemon.leech_seeded = False
+            pokemon.ingrain_active = False
             pokemon.snap_trap_turns_remaining = 0
             pokemon.syrupy_turns_remaining = 0
             pokemon.syrupy_skip_next_tick = False
@@ -127,7 +128,14 @@ class Field:
                 and outgoing_pokemon.snap_trap_turns_remaining > 0
             ):
                 raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
+            if (
+                outgoing_pokemon.current_hp > 0
+                and outgoing_pokemon.ingrain_active
+                and Type.GHOST not in outgoing_pokemon.type
+            ):
+                raise ValueError("Le Pokémon est enraciné et ne peut pas se retirer.")
             outgoing_pokemon.leech_seeded = False
+            outgoing_pokemon.ingrain_active = False
             outgoing_pokemon.snap_trap_turns_remaining = 0
             outgoing_pokemon.syrupy_turns_remaining = 0
             outgoing_pokemon.syrupy_skip_next_tick = False
@@ -226,6 +234,12 @@ class Field:
                 and active_pokemon.snap_trap_turns_remaining > 0
             ):
                 raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
+            if (
+                active_pokemon.current_hp > 0
+                and active_pokemon.ingrain_active
+                and Type.GHOST not in active_pokemon.type
+            ):
+                raise ValueError("Le Pokémon est enraciné et ne peut pas se retirer.")
             if not 0 <= team_index < len(team):
                 raise ValueError(f"L'index de switch {action_index} ne désigne aucun Pokémon de l'équipe.")
             selected_pokemon = team[team_index]
@@ -327,6 +341,7 @@ class Field:
             turn_results.extend(self._apply_leech_seed())
             turn_results.extend(self._apply_snap_trap())
             turn_results.extend(self._apply_syrup_bomb())
+            turn_results.extend(self._apply_ingrain())
             turn_results.extend(self._apply_grassy_terrain())
         return turn_results
 
@@ -363,6 +378,36 @@ class Field:
                     "applied": applied,
                     "turns_remaining": target.syrupy_turns_remaining,
                 },
+            })
+        return residual_results
+
+    def _apply_ingrain(self):
+        """Restore one sixteenth of max HP to each active rooted Pokémon."""
+        residual_results = []
+        for side in ("player", "opponent"):
+            pokemon = self._get_active_pokemon(side)
+            if (
+                pokemon is None
+                or pokemon.current_hp <= 0
+                or not pokemon.ingrain_active
+            ):
+                continue
+
+            healing = min(
+                max(1, pokemon.max_hp // 16),
+                pokemon.max_hp - pokemon.current_hp,
+            )
+            if healing <= 0:
+                continue
+
+            pokemon.current_hp += healing
+            residual_results.append({
+                "action": {
+                    "type": "ingrain_residual",
+                    "side": side,
+                    "pokemon": pokemon,
+                },
+                "result": {"healed": healing},
             })
         return residual_results
 
@@ -527,6 +572,12 @@ class Field:
         move_type = move.get_type(attacker, defender, self)
         effectiveness = 1.0
         for defending_type in defender.type:
+            if (
+                defending_type is Type.FLYING
+                and move_type is Type.GROUND
+                and self._is_grounded(defender)
+            ):
+                continue
             effectiveness *= self.calculate_type_effectiveness(move_type, defending_type)
         return effectiveness
 
@@ -608,7 +659,11 @@ class Field:
 
     def _is_grounded(self, pokemon):
         """Return whether a Pokémon is grounded for terrain interactions."""
-        return self.gravity_active or Type.FLYING not in pokemon.type
+        return (
+            self.gravity_active
+            or pokemon.ingrain_active
+            or Type.FLYING not in pokemon.type
+        )
 
     def calculate_damage(self, attacker, defender, move):
         """Calculate damage from battle stats, move power, type, and move effects.

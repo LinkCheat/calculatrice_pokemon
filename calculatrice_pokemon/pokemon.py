@@ -66,6 +66,7 @@ class Pokemon:
         self.locked_move_turns_remaining = 0
         self.confusion_turns_remaining = 0
         self.leech_seeded = False
+        self.ingrain_active = False
         self.snap_trap_turns_remaining = 0
         self.syrupy_turns_remaining = 0
         self.syrupy_skip_next_tick = False
