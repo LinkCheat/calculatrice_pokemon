@@ -4,6 +4,7 @@ from pathlib import Path
 
 from enums.type import Type
 from enums.nature import Nature
+from enums.status_condition import STATUS_CONDITION
 
 
 class Pokemon:
@@ -240,6 +241,12 @@ class Pokemon:
                     stat_value=stat_value*(1+0.5*statMod)
                 else:
                     stat_value=stat_value/(1+0.5*abs(statMod))
+
+                if (
+                    stat_name == "speed"
+                    and self.status_condition is STATUS_CONDITION.PARALYSIS
+                ):
+                    stat_value /= 2
 
             self.stats[stat_name] = int(stat_value)
 

@@ -160,6 +160,8 @@ def _display_action_result(battle_field, action, result):
             print(f"{action['pokemon'].name} doit récupérer et ne peut pas attaquer.")
         elif result.get("flinched"):
             print(f"{action['pokemon'].name} est apeuré et ne peut pas agir.")
+        elif result.get("paralyzed"):
+            print(f"{action['pokemon'].name} est paralysé et ne peut pas agir.")
         elif result.get("confusion_self_hit"):
             print(
                 f"{action['pokemon'].name} est confus et se blesse "
@@ -198,6 +200,8 @@ def _display_action_result(battle_field, action, result):
             if effect["applied"]:
                 if effect["status"] is STATUS_CONDITION.BURN:
                     print(f"{target_pokemon.name} est brûlé.")
+                elif effect["status"] is STATUS_CONDITION.PARALYSIS:
+                    print(f"{target_pokemon.name} est paralysé.")
                 else:
                     sleep_turns = effect["sleep_turns"]
                     duration_label = "tour" if sleep_turns == 1 else "tours"

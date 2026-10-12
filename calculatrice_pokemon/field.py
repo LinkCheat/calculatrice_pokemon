@@ -529,6 +529,8 @@ class Field:
         """Return whether type matchup or powder immunity prevents a move."""
         if move.powder and Type.GRASS in defender.type:
             return True
+        if move.electric_type_immune and Type.ELECTRIC in defender.type:
+            return True
         if move.grass_type_immune and Type.GRASS in defender.type:
             return True
         return self.calculate_move_effectiveness(move, defender, attacker) == 0
@@ -677,6 +679,19 @@ class Field:
                 "damage": 0,
                 "effect": None,
                 "unable_to_act": True,
+            }
+        if (
+            attacker.status_condition is STATUS_CONDITION.PARALYSIS
+            and random.random() < 0.25
+        ):
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "unable_to_act": True,
+                "paralyzed": True,
             }
         is_releasing_charge = attacker.charging_move is move
         is_releasing_lock = attacker.locked_move is move
