@@ -92,6 +92,10 @@ class Moves(ABC):
         """Return whether this move needs a charging turn in the current field."""
         return False
 
+    def requires_recharge_after_use(self):
+        """Return whether this move requires a recovery turn after hitting."""
+        return False
+
     def get_lock_turn_count(self, user, target):
         """Return the total consecutive turns this move locks its user."""
         return 1

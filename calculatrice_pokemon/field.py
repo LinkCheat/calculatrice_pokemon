@@ -84,6 +84,7 @@ class Field:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
             pokemon.charging_move = None
+            pokemon.recharging_move = None
             pokemon.locked_move = None
             pokemon.locked_move_turns_remaining = 0
             pokemon.confusion_turns_remaining = 0
@@ -125,6 +126,7 @@ class Field:
             outgoing_pokemon.syrupy_turns_remaining = 0
             outgoing_pokemon.syrupy_skip_next_tick = False
             outgoing_pokemon.charging_move = None
+            outgoing_pokemon.recharging_move = None
             outgoing_pokemon.locked_move = None
             outgoing_pokemon.locked_move_turns_remaining = 0
             outgoing_pokemon.confusion_turns_remaining = 0
@@ -181,10 +183,12 @@ class Field:
             selected_move = (
                 active_pokemon.locked_move
                 or active_pokemon.charging_move
+                or active_pokemon.recharging_move
                 or active_pokemon.moves[action_index]
             )
             if (
                 active_pokemon.charging_move is None
+                and active_pokemon.recharging_move is None
                 and active_pokemon.locked_move is None
                 and selected_move.pp <= 0
             ):
@@ -575,6 +579,17 @@ class Field:
         defender = self._get_active_pokemon(opponent_side)
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        if attacker.recharging_move is not None:
+            attacker.recharging_move = None
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "unable_to_act": True,
+                "recharging": True,
+            }
         if attacker.flinched:
             attacker.flinched = False
             return {
@@ -668,6 +683,8 @@ class Field:
             hits += 1
 
         effect = move.apply_effect(attacker, defender, damage_dealt)
+        if move.requires_recharge_after_use():
+            attacker.recharging_move = move
         return {
             "hit": True,
             "immune": False,

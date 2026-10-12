@@ -28,7 +28,11 @@ def input_player_action(battle_field, forced_switch=False):
 
     print(f"Actions disponibles pour {active_pokemon.name} :")
     if not forced_switch:
-        forced_move = active_pokemon.locked_move or active_pokemon.charging_move
+        forced_move = (
+            active_pokemon.locked_move
+            or active_pokemon.charging_move
+            or active_pokemon.recharging_move
+        )
         if forced_move is not None:
             move_index = active_pokemon.moves.index(forced_move)
             valid_indexes.add(move_index)
@@ -37,6 +41,8 @@ def input_player_action(battle_field, forced_switch=False):
                     f"{move_index}: Attaque {forced_move.name} "
                     f"(encore {active_pokemon.locked_move_turns_remaining} tour(s))"
                 )
+            elif active_pokemon.recharging_move is not None:
+                print(f"{move_index}: Récupération après {forced_move.name}")
             else:
                 print(f"{move_index}: Attaque {forced_move.name} (tour de frappe)")
         else:
@@ -143,7 +149,9 @@ def _display_action_result(battle_field, action, result):
         else battle_field.player_active_pokemon
     )
     if result.get("unable_to_act"):
-        if result.get("flinched"):
+        if result.get("recharging"):
+            print(f"{action['pokemon'].name} doit récupérer et ne peut pas attaquer.")
+        elif result.get("flinched"):
             print(f"{action['pokemon'].name} est apeuré et ne peut pas agir.")
         elif result.get("confusion_self_hit"):
             print(
