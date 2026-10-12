@@ -60,6 +60,16 @@ class Moves(ABC):
         """Apply this move's effect after damage has been dealt."""
         return self.effect(user, target)
 
+    def targets_user_team(self):
+        """Return whether this move applies its effect to the user's team."""
+        return False
+
+    def apply_team_effect(self, user, team):
+        """Apply this move's effect to the user's team when supported."""
+        raise NotImplementedError(
+            f"{self.name} does not implement an effect on the user's team."
+        )
+
     def use(self, user, target):
         """Consume one PP and apply the move's effect to its target."""
         self.consume_pp()

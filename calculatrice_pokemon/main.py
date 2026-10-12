@@ -168,7 +168,16 @@ def _display_action_result(battle_field, action, result):
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
     else:
         effect = result["effect"]
-        if effect and "status" in effect:
+        if effect and effect.get("condition") == "aromatherapy":
+            print(f"{action['pokemon'].name} utilise Aromathérapie.")
+            if effect["cured"]:
+                print(
+                    "Les problèmes de statut sont soignés pour : "
+                    f"{', '.join(effect['cured'])}."
+                )
+            else:
+                print("Aucun problème de statut à soigner dans l'équipe.")
+        elif effect and "status" in effect:
             if effect["applied"]:
                 if effect["status"] is STATUS_CONDITION.BURN:
                     print(f"{target_pokemon.name} est brûlé.")

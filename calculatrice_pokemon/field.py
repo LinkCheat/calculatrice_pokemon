@@ -665,7 +665,7 @@ class Field:
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
 
-        if self.is_immune_to_move(move, defender, attacker):
+        if not move.targets_user_team() and self.is_immune_to_move(move, defender, attacker):
             return {"hit": True, "immune": True, "damage": 0, "effect": None, "hits": 0}
 
         attacker.calculateStats()
@@ -682,7 +682,10 @@ class Field:
             defender.current_hp = max(0, defender.current_hp - hit_damage)
             hits += 1
 
-        effect = move.apply_effect(attacker, defender, damage_dealt)
+        if move.targets_user_team():
+            effect = move.apply_team_effect(attacker, self._get_team(side))
+        else:
+            effect = move.apply_effect(attacker, defender, damage_dealt)
         if move.requires_recharge_after_use():
             attacker.recharging_move = move
         return {
