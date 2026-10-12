@@ -4,6 +4,7 @@ from pathlib import Path
 
 from enums.type import Type
 from enums.nature import Nature
+from enums.status_condition import STATUS_CONDITION
 
 
 class Pokemon:
@@ -20,6 +21,7 @@ class Pokemon:
         self.name = data["name"]
         self.form = data["form"]
         self.type = data["type"]
+        self.forest_cursed = False
         self.base_stats = data["stats"]
         self.weight = data["weight"]
 
@@ -57,10 +59,14 @@ class Pokemon:
         self.status_condition = None
         self.sleep_turns_remaining = 0
         self.charging_move = None
+        self.recharging_move = None
+        self.protected_this_turn = False
+        self.protection_streak = 0
         self.locked_move = None
         self.locked_move_turns_remaining = 0
         self.confusion_turns_remaining = 0
         self.leech_seeded = False
+        self.ingrain_active = False
         self.snap_trap_turns_remaining = 0
         self.syrupy_turns_remaining = 0
         self.syrupy_skip_next_tick = False
@@ -238,6 +244,12 @@ class Pokemon:
                     stat_value=stat_value*(1+0.5*statMod)
                 else:
                     stat_value=stat_value/(1+0.5*abs(statMod))
+
+                if (
+                    stat_name == "speed"
+                    and self.status_condition is STATUS_CONDITION.PARALYSIS
+                ):
+                    stat_value /= 2
 
             self.stats[stat_name] = int(stat_value)
 

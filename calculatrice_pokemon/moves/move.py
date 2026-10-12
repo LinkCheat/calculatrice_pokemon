@@ -29,6 +29,8 @@ class Moves(ABC):
         contact: bool = False,
         powder: bool = False,
         grass_type_immune: bool = False,
+        electric_type_immune: bool = False,
+        sound: bool = False,
     ):
         """Initialize move metadata and set current PP to the maximum PP.
 
@@ -50,6 +52,8 @@ class Moves(ABC):
         self.contact = contact
         self.powder = powder
         self.grass_type_immune = grass_type_immune
+        self.electric_type_immune = electric_type_immune
+        self.sound = sound
 
     @abstractmethod
     def effect(self, user, target):
@@ -59,6 +63,30 @@ class Moves(ABC):
     def apply_effect(self, user, target, damage_dealt):
         """Apply this move's effect after damage has been dealt."""
         return self.effect(user, target)
+
+    def apply_effect_with_field(self, user, target, damage_dealt, field):
+        """Apply this move's effect with field context when required."""
+        return self.apply_effect(user, target, damage_dealt)
+
+    def targets_user_team(self):
+        """Return whether this move applies its effect to the user's team."""
+        return False
+
+    def apply_team_effect(self, user, team):
+        """Apply this move's effect to the user's team when supported."""
+        raise NotImplementedError(
+            f"{self.name} does not implement an effect on the user's team."
+        )
+
+    def applies_field_effect(self):
+        """Return whether this move changes the battle field itself."""
+        return False
+
+    def apply_field_effect(self, user, field):
+        """Apply this move's effect to the battle field when supported."""
+        raise NotImplementedError(
+            f"{self.name} does not implement a field effect."
+        )
 
     def use(self, user, target):
         """Consume one PP and apply the move's effect to its target."""
@@ -90,6 +118,14 @@ class Moves(ABC):
 
     def requires_charge(self, field):
         """Return whether this move needs a charging turn in the current field."""
+        return False
+
+    def requires_recharge_after_use(self):
+        """Return whether this move requires a recovery turn after hitting."""
+        return False
+
+    def is_protection_move(self):
+        """Return whether this move protects its user for the current turn."""
         return False
 
     def get_lock_turn_count(self, user, target):
@@ -126,6 +162,23 @@ class Moves(ABC):
             "status": STATUS_CONDITION.SLEEP,
             "applied": True,
             "sleep_turns": sleep_turns,
+        }
+
+    def inflict_paralysis(self, target):
+        """Paralyze an eligible target unless it already has a major status."""
+        if target.status_condition is not None:
+            return {
+                "name": self.name,
+                "status": None,
+                "applied": False,
+                "reason": "already_statused",
+            }
+
+        target.status_condition = STATUS_CONDITION.PARALYSIS
+        return {
+            "name": self.name,
+            "status": STATUS_CONDITION.PARALYSIS,
+            "applied": True,
         }
 
     def inflict_leech_seed(self, target):

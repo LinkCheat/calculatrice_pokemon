@@ -1,6 +1,7 @@
 
 try:
     from enums.nature import Nature
+    from enums.status_condition import STATUS_CONDITION
     from enums.type import Type
     from moves import *
     import field
@@ -8,6 +9,7 @@ try:
     import moves.move as move
 except ModuleNotFoundError:
     from calculatrice_pokemon.enums.nature import Nature
+    from calculatrice_pokemon.enums.status_condition import STATUS_CONDITION
     from calculatrice_pokemon.enums.type import Type
     from calculatrice_pokemon.moves import *
     import calculatrice_pokemon.field as field
@@ -26,7 +28,11 @@ def input_player_action(battle_field, forced_switch=False):
 
     print(f"Actions disponibles pour {active_pokemon.name} :")
     if not forced_switch:
-        forced_move = active_pokemon.locked_move or active_pokemon.charging_move
+        forced_move = (
+            active_pokemon.locked_move
+            or active_pokemon.charging_move
+            or active_pokemon.recharging_move
+        )
         if forced_move is not None:
             move_index = active_pokemon.moves.index(forced_move)
             valid_indexes.add(move_index)
@@ -35,6 +41,8 @@ def input_player_action(battle_field, forced_switch=False):
                     f"{move_index}: Attaque {forced_move.name} "
                     f"(encore {active_pokemon.locked_move_turns_remaining} tour(s))"
                 )
+            elif active_pokemon.recharging_move is not None:
+                print(f"{move_index}: Récupération après {forced_move.name}")
             else:
                 print(f"{move_index}: Attaque {forced_move.name} (tour de frappe)")
         else:
@@ -64,6 +72,12 @@ def input_player_action(battle_field, forced_switch=False):
             availability = " - K.O."
         elif active_pokemon.current_hp > 0 and active_pokemon.locked_move is not None:
             availability = " - bloqué sur une capacité"
+        elif (
+            active_pokemon.current_hp > 0
+            and active_pokemon.ingrain_active
+            and Type.GHOST not in active_pokemon.type
+        ):
+            availability = " - enraciné, switch impossible"
         elif active_pokemon.current_hp > 0 and active_pokemon.snap_trap_turns_remaining > 0:
             availability = " - piégé, switch impossible"
         else:
@@ -130,6 +144,20 @@ def _display_action_result(battle_field, action, result):
             print(f"L'effet de Sirotage prend fin pour {action['pokemon'].name}.")
         return
 
+    if action["type"] == "ingrain_residual":
+        print(
+            f"Racines restaure {result['healed']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        return
+
+    if action["type"] == "grassy_terrain_residual":
+        print(
+            f"Champ Herbu restaure {result['healed']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        return
+
     if result.get("charging"):
         print(f"{action['pokemon'].name} concentre la lumière pour {action['move'].name}.")
         return
@@ -141,8 +169,12 @@ def _display_action_result(battle_field, action, result):
         else battle_field.player_active_pokemon
     )
     if result.get("unable_to_act"):
-        if result.get("flinched"):
+        if result.get("recharging"):
+            print(f"{action['pokemon'].name} doit récupérer et ne peut pas attaquer.")
+        elif result.get("flinched"):
             print(f"{action['pokemon'].name} est apeuré et ne peut pas agir.")
+        elif result.get("paralyzed"):
+            print(f"{action['pokemon'].name} est paralysé et ne peut pas agir.")
         elif result.get("confusion_self_hit"):
             print(
                 f"{action['pokemon'].name} est confus et se blesse "
@@ -150,6 +182,22 @@ def _display_action_result(battle_field, action, result):
             )
         else:
             print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
+    elif result.get("protected"):
+        print(f"{action['pokemon'].name} se protège avec {action['move'].name}.")
+    elif result.get("blocked_by_protection"):
+        print(
+            f"{action['pokemon'].name} est bloqué par la protection de "
+            f"{target_pokemon.name}."
+        )
+        if result["contact_recoil"]:
+            print(
+                f"{action['pokemon'].name} perd {result['contact_recoil']} PV "
+                "en touchant la barrière épineuse."
+            )
+            if action["pokemon"].current_hp == 0:
+                print(f"{action['pokemon'].name} est K.O.")
+    elif result.get("protection_failed"):
+        print(f"{action['pokemon'].name} échoue à utiliser {action['move'].name}.")
     elif result.get("fainted"):
         print(f"{action['pokemon'].name} est K.O. et ne peut pas agir.")
     elif not result["hit"]:
@@ -158,14 +206,54 @@ def _display_action_result(battle_field, action, result):
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
     else:
         effect = result["effect"]
-        if effect and "status" in effect:
-            if effect["applied"]:
-                sleep_turns = effect["sleep_turns"]
-                duration_label = "tour" if sleep_turns == 1 else "tours"
+        if effect and effect.get("condition") == "ingrain":
+            print(f"{action['pokemon'].name} s'enracine avec Racines.")
+        elif effect and effect.get("condition") == "jungle_healing":
+            if effect["healed"]:
                 print(
-                    f"{target_pokemon.name} s'endort pour "
-                    f"{sleep_turns} {duration_label}."
+                    f"{action['pokemon'].name} récupère "
+                    f"{effect['healed']} PV grâce à Jungle Healing."
                 )
+            else:
+                print(f"{action['pokemon'].name} ne récupère aucun PV.")
+            if effect["cured"]:
+                print(f"Les altérations de statut de {action['pokemon'].name} sont soignées.")
+        elif effect and effect.get("condition") == "grassy_terrain":
+            print(
+                f"{action['pokemon'].name} utilise Champ Herbu. "
+                f"Le terrain restera actif pendant {effect['turns']} tours."
+            )
+        elif effect and effect.get("condition") == "aromatherapy":
+            print(f"{action['pokemon'].name} utilise Aromathérapie.")
+            if effect["cured"]:
+                print(
+                    "Les problèmes de statut sont soignés pour : "
+                    f"{', '.join(effect['cured'])}."
+                )
+            else:
+                print("Aucun problème de statut à soigner dans l'équipe.")
+        elif effect and effect.get("condition") == "forest_curse":
+            if effect["applied"]:
+                print(f"{target_pokemon.name} reçoit le type Plante.")
+            else:
+                print(f"{target_pokemon.name} est déjà de type Plante.")
+        elif effect and "status" in effect:
+            if effect["applied"]:
+                if effect["status"] is STATUS_CONDITION.BURN:
+                    print(f"{target_pokemon.name} est brûlé.")
+                elif effect["status"] is STATUS_CONDITION.PARALYSIS:
+                    print(f"{target_pokemon.name} est paralysé.")
+                else:
+                    sleep_turns = effect["sleep_turns"]
+                    duration_label = "tour" if sleep_turns == 1 else "tours"
+                    print(
+                        f"{target_pokemon.name} s'endort pour "
+                        f"{sleep_turns} {duration_label}."
+                    )
+            elif effect.get("reason") == "chance_failed":
+                print(f"{target_pokemon.name} échappe à la brûlure.")
+            elif effect.get("reason") == "type_immune":
+                print(f"{target_pokemon.name} ne peut pas être brûlé.")
             else:
                 print(f"{target_pokemon.name} est déjà affecté par un statut.")
         else:
@@ -180,28 +268,48 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") in ("attack", "defense", "sp_def", "speed"):
+            stat_changes = (
+                effect.get("stat_changes")
+                if effect and "stat_changes" in effect
+                else [effect] if effect and effect.get("stat") else []
+            )
+            for stat_change in stat_changes:
+                if stat_change.get("stat") not in (
+                    "attack",
+                    "defense",
+                    "sp_atk",
+                    "sp_def",
+                    "speed",
+                    "accuracy",
+                ):
+                    continue
                 recipient = (
                     action["pokemon"]
-                    if effect.get("recipient") == "user"
+                    if stat_change.get("recipient") == "user"
                     else target_pokemon
                 )
                 stat_name = {
                     "attack": "L'Attaque",
                     "defense": "La Défense",
+                    "sp_atk": "L'Attaque Spéciale",
                     "sp_def": "La Défense Spéciale",
                     "speed": "La Vitesse",
-                }[effect["stat"]]
-                if effect["applied"]:
-                    change = "augmente" if effect["stages"] > 0 else "baisse"
-                    stage_count = abs(effect["stages"])
+                    "accuracy": "La Précision",
+                }[stat_change["stat"]]
+                if stat_change["applied"]:
+                    change = "augmente" if stat_change["stages"] > 0 else "baisse"
+                    stage_count = abs(stat_change["stages"])
                     if stage_count == 1:
                         amount = "d'un cran"
                     else:
                         amount = f"de {stage_count} crans"
                     print(f"{stat_name} de {recipient.name} {change} {amount}.")
                 else:
-                    limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
+                    limit = (
+                        "augmenter"
+                        if stat_change.get("recipient") == "user"
+                        else "baisser"
+                    )
                     print(f"{stat_name} de {recipient.name} ne peut pas {limit} davantage.")
             if effect and "healed" in effect:
                 print(

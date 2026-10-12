@@ -26,6 +26,7 @@ class Field:
 
         self.weather = None
         self.terrain = None
+        self.terrain_turns_remaining = 0
         self.gravity_active = False
 
     @property
@@ -83,11 +84,18 @@ class Field:
         for pokemon in self._player_team + self._opponent_team:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
+            if pokemon.forest_cursed:
+                pokemon.type.remove(Type.GRASS)
+                pokemon.forest_cursed = False
             pokemon.charging_move = None
+            pokemon.recharging_move = None
+            pokemon.protected_this_turn = False
+            pokemon.protection_streak = 0
             pokemon.locked_move = None
             pokemon.locked_move_turns_remaining = 0
             pokemon.confusion_turns_remaining = 0
             pokemon.leech_seeded = False
+            pokemon.ingrain_active = False
             pokemon.snap_trap_turns_remaining = 0
             pokemon.syrupy_turns_remaining = 0
             pokemon.syrupy_skip_next_tick = False
@@ -120,14 +128,27 @@ class Field:
                 and outgoing_pokemon.snap_trap_turns_remaining > 0
             ):
                 raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
+            if (
+                outgoing_pokemon.current_hp > 0
+                and outgoing_pokemon.ingrain_active
+                and Type.GHOST not in outgoing_pokemon.type
+            ):
+                raise ValueError("Le Pokémon est enraciné et ne peut pas se retirer.")
             outgoing_pokemon.leech_seeded = False
+            outgoing_pokemon.ingrain_active = False
             outgoing_pokemon.snap_trap_turns_remaining = 0
             outgoing_pokemon.syrupy_turns_remaining = 0
             outgoing_pokemon.syrupy_skip_next_tick = False
             outgoing_pokemon.charging_move = None
+            outgoing_pokemon.recharging_move = None
+            outgoing_pokemon.protected_this_turn = False
+            outgoing_pokemon.protection_streak = 0
             outgoing_pokemon.locked_move = None
             outgoing_pokemon.locked_move_turns_remaining = 0
             outgoing_pokemon.confusion_turns_remaining = 0
+            if outgoing_pokemon.forest_cursed:
+                outgoing_pokemon.type.remove(Type.GRASS)
+                outgoing_pokemon.forest_cursed = False
         self._set_active_index(side, team_index)
         return team[team_index]
 
@@ -181,10 +202,12 @@ class Field:
             selected_move = (
                 active_pokemon.locked_move
                 or active_pokemon.charging_move
+                or active_pokemon.recharging_move
                 or active_pokemon.moves[action_index]
             )
             if (
                 active_pokemon.charging_move is None
+                and active_pokemon.recharging_move is None
                 and active_pokemon.locked_move is None
                 and selected_move.pp <= 0
             ):
@@ -211,6 +234,12 @@ class Field:
                 and active_pokemon.snap_trap_turns_remaining > 0
             ):
                 raise ValueError("Le Pokémon actif est piégé et ne peut pas être retiré.")
+            if (
+                active_pokemon.current_hp > 0
+                and active_pokemon.ingrain_active
+                and Type.GHOST not in active_pokemon.type
+            ):
+                raise ValueError("Le Pokémon est enraciné et ne peut pas se retirer.")
             if not 0 <= team_index < len(team):
                 raise ValueError(f"L'index de switch {action_index} ne désigne aucun Pokémon de l'équipe.")
             selected_pokemon = team[team_index]
@@ -264,6 +293,7 @@ class Field:
         """Resolve both sides' actions in order, then advance the turn counter."""
         for pokemon in self._player_team + self._opponent_team:
             pokemon.has_acted_this_turn = False
+            pokemon.protected_this_turn = False
 
         resolved_actions = self.determine_attack_order(
             player_action_index,
@@ -311,6 +341,8 @@ class Field:
             turn_results.extend(self._apply_leech_seed())
             turn_results.extend(self._apply_snap_trap())
             turn_results.extend(self._apply_syrup_bomb())
+            turn_results.extend(self._apply_ingrain())
+            turn_results.extend(self._apply_grassy_terrain())
         return turn_results
 
     def _apply_syrup_bomb(self):
@@ -347,6 +379,80 @@ class Field:
                     "turns_remaining": target.syrupy_turns_remaining,
                 },
             })
+        return residual_results
+
+    def _apply_ingrain(self):
+        """Restore one sixteenth of max HP to each active rooted Pokémon."""
+        residual_results = []
+        for side in ("player", "opponent"):
+            pokemon = self._get_active_pokemon(side)
+            if (
+                pokemon is None
+                or pokemon.current_hp <= 0
+                or not pokemon.ingrain_active
+            ):
+                continue
+
+            healing = min(
+                max(1, pokemon.max_hp // 16),
+                pokemon.max_hp - pokemon.current_hp,
+            )
+            if healing <= 0:
+                continue
+
+            pokemon.current_hp += healing
+            residual_results.append({
+                "action": {
+                    "type": "ingrain_residual",
+                    "side": side,
+                    "pokemon": pokemon,
+                },
+                "result": {"healed": healing},
+            })
+        return residual_results
+
+    def _apply_grassy_terrain(self):
+        """Heal active grounded Pokémon, then count down Grassy Terrain."""
+        if (
+            self.terrain is not Terrain.GRASSY
+            or self.terrain_turns_remaining <= 0
+        ):
+            return []
+
+        residual_results = []
+        for side in ("player", "opponent"):
+            pokemon = self._get_active_pokemon(side)
+            if (
+                pokemon is None
+                or pokemon.current_hp <= 0
+                or not self._is_grounded(pokemon)
+            ):
+                continue
+
+            healing = min(
+                max(1, pokemon.max_hp // 16),
+                pokemon.max_hp - pokemon.current_hp,
+            )
+            if healing <= 0:
+                continue
+
+            pokemon.current_hp += healing
+            residual_results.append({
+                "action": {
+                    "type": "grassy_terrain_residual",
+                    "side": side,
+                    "pokemon": pokemon,
+                },
+                "result": {
+                    "healed": healing,
+                    "turns_remaining": self.terrain_turns_remaining - 1,
+                },
+            })
+
+        self.terrain_turns_remaining -= 1
+        if self.terrain_turns_remaining <= 0:
+            self.terrain_turns_remaining = 0
+            self.terrain = None
         return residual_results
 
     def _advance_move_lock(self, pokemon):
@@ -466,12 +572,20 @@ class Field:
         move_type = move.get_type(attacker, defender, self)
         effectiveness = 1.0
         for defending_type in defender.type:
+            if (
+                defending_type is Type.FLYING
+                and move_type is Type.GROUND
+                and self._is_grounded(defender)
+            ):
+                continue
             effectiveness *= self.calculate_type_effectiveness(move_type, defending_type)
         return effectiveness
 
     def is_immune_to_move(self, move, defender, attacker=None):
         """Return whether type matchup or powder immunity prevents a move."""
         if move.powder and Type.GRASS in defender.type:
+            return True
+        if move.electric_type_immune and Type.ELECTRIC in defender.type:
             return True
         if move.grass_type_immune and Type.GRASS in defender.type:
             return True
@@ -530,10 +644,25 @@ class Field:
 
     def calculate_damage_modifiers(self, attacker, defender, move):
         """Combine type effectiveness, STAB, and the critical-hit multiplier."""
-        return (
+        modifiers = (
             self.calculate_move_effectiveness(move, defender, attacker)
             * self.calculate_stab_multiplier(attacker, move)
             * self.calculate_critical_hit_multiplier(attacker, defender, move)
+        )
+        if (
+            self.terrain is Terrain.GRASSY
+            and self._is_grounded(attacker)
+            and move.get_type(attacker, defender, self) is Type.GRASS
+        ):
+            modifiers *= 1.3
+        return modifiers
+
+    def _is_grounded(self, pokemon):
+        """Return whether a Pokémon is grounded for terrain interactions."""
+        return (
+            self.gravity_active
+            or pokemon.ingrain_active
+            or Type.FLYING not in pokemon.type
         )
 
     def calculate_damage(self, attacker, defender, move):
@@ -575,7 +704,28 @@ class Field:
         defender = self._get_active_pokemon(opponent_side)
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        is_protection_move = move.is_protection_move()
+        if not is_protection_move:
+            attacker.protection_streak = 0
+
+        def fail_protection_streak():
+            if is_protection_move:
+                attacker.protection_streak = 0
+
+        if attacker.recharging_move is not None:
+            fail_protection_streak()
+            attacker.recharging_move = None
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "unable_to_act": True,
+                "recharging": True,
+            }
         if attacker.flinched:
+            fail_protection_streak()
             attacker.flinched = False
             return {
                 "hit": False,
@@ -587,6 +737,7 @@ class Field:
                 "flinched": True,
             }
         if attacker.status_condition is STATUS_CONDITION.SLEEP:
+            fail_protection_streak()
             if attacker.charging_move is move:
                 attacker.charging_move = None
             attacker.sleep_turns_remaining -= 1
@@ -600,6 +751,20 @@ class Field:
                 "effect": None,
                 "unable_to_act": True,
             }
+        if (
+            attacker.status_condition is STATUS_CONDITION.PARALYSIS
+            and random.random() < 0.25
+        ):
+            fail_protection_streak()
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "unable_to_act": True,
+                "paralyzed": True,
+            }
         is_releasing_charge = attacker.charging_move is move
         is_releasing_lock = attacker.locked_move is move
 
@@ -611,6 +776,7 @@ class Field:
             if confusion_turns_remaining == 0:
                 attacker.confusion_turns_remaining = 0
             if confusion_self_hit:
+                fail_protection_streak()
                 damage = self.calculate_confusion_damage(attacker)
                 attacker.current_hp = max(0, attacker.current_hp - damage)
                 return {
@@ -631,15 +797,64 @@ class Field:
             attacker.charging_move = None
         elif not is_releasing_lock:
             move.consume_pp()
-            if move.requires_charge(self):
-                attacker.charging_move = move
+
+        if is_protection_move:
+            success_chance = 1 / (2 ** attacker.protection_streak)
+            if success_chance < 1 and random.random() >= success_chance:
+                attacker.protection_streak = 0
                 return {
-                    "hit": True,
+                    "hit": False,
                     "immune": False,
                     "damage": 0,
                     "effect": None,
-                    "charging": True,
+                    "hits": 0,
+                    "protection_failed": True,
                 }
+            attacker.protection_streak += 1
+            attacker.protected_this_turn = True
+            effect = move.effect(attacker, defender)
+            if effect is None:
+                effect = {"condition": "protection", "applied": True}
+            return {
+                "hit": True,
+                "immune": False,
+                "damage": 0,
+                "effect": effect,
+                "hits": 0,
+                "protected": True,
+            }
+
+        if defender.protected_this_turn:
+            contact_recoil = 0
+            if move.contact:
+                contact_recoil = min(
+                    max(1, attacker.max_hp // 8),
+                    attacker.current_hp,
+                )
+                attacker.current_hp -= contact_recoil
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "blocked_by_protection": True,
+                "contact_recoil": contact_recoil,
+            }
+
+        if (
+            not is_releasing_lock
+            and not is_releasing_charge
+            and move.requires_charge(self)
+        ):
+            attacker.charging_move = move
+            return {
+                "hit": True,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "charging": True,
+            }
 
         if not is_releasing_lock and not is_releasing_charge:
             lock_turn_count = move.get_lock_turn_count(attacker, defender)
@@ -650,7 +865,11 @@ class Field:
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
 
-        if self.is_immune_to_move(move, defender, attacker):
+        if (
+            not move.targets_user_team()
+            and not move.applies_field_effect()
+            and self.is_immune_to_move(move, defender, attacker)
+        ):
             return {"hit": True, "immune": True, "damage": 0, "effect": None, "hits": 0}
 
         attacker.calculateStats()
@@ -667,7 +886,19 @@ class Field:
             defender.current_hp = max(0, defender.current_hp - hit_damage)
             hits += 1
 
-        effect = move.apply_effect(attacker, defender, damage_dealt)
+        if move.applies_field_effect():
+            effect = move.apply_field_effect(attacker, self)
+        elif move.targets_user_team():
+            effect = move.apply_team_effect(attacker, self._get_team(side))
+        else:
+            effect = move.apply_effect_with_field(
+                attacker,
+                defender,
+                damage_dealt,
+                self,
+            )
+        if move.requires_recharge_after_use():
+            attacker.recharging_move = move
         return {
             "hit": True,
             "immune": False,
