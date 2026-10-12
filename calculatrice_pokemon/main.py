@@ -208,6 +208,16 @@ def _display_action_result(battle_field, action, result):
         effect = result["effect"]
         if effect and effect.get("condition") == "ingrain":
             print(f"{action['pokemon'].name} s'enracine avec Racines.")
+        elif effect and effect.get("condition") == "jungle_healing":
+            if effect["healed"]:
+                print(
+                    f"{action['pokemon'].name} récupère "
+                    f"{effect['healed']} PV grâce à Jungle Healing."
+                )
+            else:
+                print(f"{action['pokemon'].name} ne récupère aucun PV.")
+            if effect["cured"]:
+                print(f"Les altérations de statut de {action['pokemon'].name} sont soignées.")
         elif effect and effect.get("condition") == "grassy_terrain":
             print(
                 f"{action['pokemon'].name} utilise Champ Herbu. "
