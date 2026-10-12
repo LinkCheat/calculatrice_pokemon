@@ -60,6 +60,8 @@ class Pokemon:
         self.sleep_turns_remaining = 0
         self.charging_move = None
         self.recharging_move = None
+        self.protected_this_turn = False
+        self.protection_streak = 0
         self.locked_move = None
         self.locked_move_turns_remaining = 0
         self.confusion_turns_remaining = 0

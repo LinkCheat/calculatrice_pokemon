@@ -122,6 +122,10 @@ class Moves(ABC):
         """Return whether this move requires a recovery turn after hitting."""
         return False
 
+    def is_protection_move(self):
+        """Return whether this move protects its user for the current turn."""
+        return False
+
     def get_lock_turn_count(self, user, target):
         """Return the total consecutive turns this move locks its user."""
         return 1

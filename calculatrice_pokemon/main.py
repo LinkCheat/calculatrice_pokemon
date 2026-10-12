@@ -169,6 +169,22 @@ def _display_action_result(battle_field, action, result):
             )
         else:
             print(f"{action['pokemon'].name} est endormi et ne peut pas agir.")
+    elif result.get("protected"):
+        print(f"{action['pokemon'].name} se protège avec {action['move'].name}.")
+    elif result.get("blocked_by_protection"):
+        print(
+            f"{action['pokemon'].name} est bloqué par la protection de "
+            f"{target_pokemon.name}."
+        )
+        if result["contact_recoil"]:
+            print(
+                f"{action['pokemon'].name} perd {result['contact_recoil']} PV "
+                "en touchant la barrière épineuse."
+            )
+            if action["pokemon"].current_hp == 0:
+                print(f"{action['pokemon'].name} est K.O.")
+    elif result.get("protection_failed"):
+        print(f"{action['pokemon'].name} échoue à utiliser {action['move'].name}.")
     elif result.get("fainted"):
         print(f"{action['pokemon'].name} est K.O. et ne peut pas agir.")
     elif not result["hit"]:

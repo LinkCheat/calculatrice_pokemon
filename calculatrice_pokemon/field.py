@@ -89,6 +89,8 @@ class Field:
                 pokemon.forest_cursed = False
             pokemon.charging_move = None
             pokemon.recharging_move = None
+            pokemon.protected_this_turn = False
+            pokemon.protection_streak = 0
             pokemon.locked_move = None
             pokemon.locked_move_turns_remaining = 0
             pokemon.confusion_turns_remaining = 0
@@ -131,6 +133,8 @@ class Field:
             outgoing_pokemon.syrupy_skip_next_tick = False
             outgoing_pokemon.charging_move = None
             outgoing_pokemon.recharging_move = None
+            outgoing_pokemon.protected_this_turn = False
+            outgoing_pokemon.protection_streak = 0
             outgoing_pokemon.locked_move = None
             outgoing_pokemon.locked_move_turns_remaining = 0
             outgoing_pokemon.confusion_turns_remaining = 0
@@ -275,6 +279,7 @@ class Field:
         """Resolve both sides' actions in order, then advance the turn counter."""
         for pokemon in self._player_team + self._opponent_team:
             pokemon.has_acted_this_turn = False
+            pokemon.protected_this_turn = False
 
         resolved_actions = self.determine_attack_order(
             player_action_index,
@@ -644,7 +649,16 @@ class Field:
         defender = self._get_active_pokemon(opponent_side)
         if attacker is None or defender is None:
             raise ValueError("Chaque camp doit avoir un Pokémon actif pour résoudre une attaque.")
+        is_protection_move = move.is_protection_move()
+        if not is_protection_move:
+            attacker.protection_streak = 0
+
+        def fail_protection_streak():
+            if is_protection_move:
+                attacker.protection_streak = 0
+
         if attacker.recharging_move is not None:
+            fail_protection_streak()
             attacker.recharging_move = None
             return {
                 "hit": False,
@@ -656,6 +670,7 @@ class Field:
                 "recharging": True,
             }
         if attacker.flinched:
+            fail_protection_streak()
             attacker.flinched = False
             return {
                 "hit": False,
@@ -667,6 +682,7 @@ class Field:
                 "flinched": True,
             }
         if attacker.status_condition is STATUS_CONDITION.SLEEP:
+            fail_protection_streak()
             if attacker.charging_move is move:
                 attacker.charging_move = None
             attacker.sleep_turns_remaining -= 1
@@ -684,6 +700,7 @@ class Field:
             attacker.status_condition is STATUS_CONDITION.PARALYSIS
             and random.random() < 0.25
         ):
+            fail_protection_streak()
             return {
                 "hit": False,
                 "immune": False,
@@ -704,6 +721,7 @@ class Field:
             if confusion_turns_remaining == 0:
                 attacker.confusion_turns_remaining = 0
             if confusion_self_hit:
+                fail_protection_streak()
                 damage = self.calculate_confusion_damage(attacker)
                 attacker.current_hp = max(0, attacker.current_hp - damage)
                 return {
@@ -724,15 +742,64 @@ class Field:
             attacker.charging_move = None
         elif not is_releasing_lock:
             move.consume_pp()
-            if move.requires_charge(self):
-                attacker.charging_move = move
+
+        if is_protection_move:
+            success_chance = 1 / (2 ** attacker.protection_streak)
+            if success_chance < 1 and random.random() >= success_chance:
+                attacker.protection_streak = 0
                 return {
-                    "hit": True,
+                    "hit": False,
                     "immune": False,
                     "damage": 0,
                     "effect": None,
-                    "charging": True,
+                    "hits": 0,
+                    "protection_failed": True,
                 }
+            attacker.protection_streak += 1
+            attacker.protected_this_turn = True
+            effect = move.effect(attacker, defender)
+            if effect is None:
+                effect = {"condition": "protection", "applied": True}
+            return {
+                "hit": True,
+                "immune": False,
+                "damage": 0,
+                "effect": effect,
+                "hits": 0,
+                "protected": True,
+            }
+
+        if defender.protected_this_turn:
+            contact_recoil = 0
+            if move.contact:
+                contact_recoil = min(
+                    max(1, attacker.max_hp // 8),
+                    attacker.current_hp,
+                )
+                attacker.current_hp -= contact_recoil
+            return {
+                "hit": False,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "hits": 0,
+                "blocked_by_protection": True,
+                "contact_recoil": contact_recoil,
+            }
+
+        if (
+            not is_releasing_lock
+            and not is_releasing_charge
+            and move.requires_charge(self)
+        ):
+            attacker.charging_move = move
+            return {
+                "hit": True,
+                "immune": False,
+                "damage": 0,
+                "effect": None,
+                "charging": True,
+            }
 
         if not is_releasing_lock and not is_releasing_charge:
             lock_turn_count = move.get_lock_turn_count(attacker, defender)
