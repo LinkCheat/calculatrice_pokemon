@@ -192,6 +192,7 @@ def _display_action_result(battle_field, action, result):
             if effect and effect.get("stat") in (
                 "attack",
                 "defense",
+                "sp_atk",
                 "sp_def",
                 "speed",
                 "accuracy",
@@ -204,6 +205,7 @@ def _display_action_result(battle_field, action, result):
                 stat_name = {
                     "attack": "L'Attaque",
                     "defense": "La Défense",
+                    "sp_atk": "L'Attaque Spéciale",
                     "sp_def": "La Défense Spéciale",
                     "speed": "La Vitesse",
                     "accuracy": "La Précision",
