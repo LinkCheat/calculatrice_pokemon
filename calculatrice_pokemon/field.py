@@ -26,6 +26,7 @@ class Field:
 
         self.weather = None
         self.terrain = None
+        self.terrain_turns_remaining = 0
         self.gravity_active = False
 
     @property
@@ -315,6 +316,7 @@ class Field:
             turn_results.extend(self._apply_leech_seed())
             turn_results.extend(self._apply_snap_trap())
             turn_results.extend(self._apply_syrup_bomb())
+            turn_results.extend(self._apply_grassy_terrain())
         return turn_results
 
     def _apply_syrup_bomb(self):
@@ -351,6 +353,50 @@ class Field:
                     "turns_remaining": target.syrupy_turns_remaining,
                 },
             })
+        return residual_results
+
+    def _apply_grassy_terrain(self):
+        """Heal active grounded Pokémon, then count down Grassy Terrain."""
+        if (
+            self.terrain is not Terrain.GRASSY
+            or self.terrain_turns_remaining <= 0
+        ):
+            return []
+
+        residual_results = []
+        for side in ("player", "opponent"):
+            pokemon = self._get_active_pokemon(side)
+            if (
+                pokemon is None
+                or pokemon.current_hp <= 0
+                or not self._is_grounded(pokemon)
+            ):
+                continue
+
+            healing = min(
+                max(1, pokemon.max_hp // 16),
+                pokemon.max_hp - pokemon.current_hp,
+            )
+            if healing <= 0:
+                continue
+
+            pokemon.current_hp += healing
+            residual_results.append({
+                "action": {
+                    "type": "grassy_terrain_residual",
+                    "side": side,
+                    "pokemon": pokemon,
+                },
+                "result": {
+                    "healed": healing,
+                    "turns_remaining": self.terrain_turns_remaining - 1,
+                },
+            })
+
+        self.terrain_turns_remaining -= 1
+        if self.terrain_turns_remaining <= 0:
+            self.terrain_turns_remaining = 0
+            self.terrain = None
         return residual_results
 
     def _advance_move_lock(self, pokemon):
@@ -534,11 +580,22 @@ class Field:
 
     def calculate_damage_modifiers(self, attacker, defender, move):
         """Combine type effectiveness, STAB, and the critical-hit multiplier."""
-        return (
+        modifiers = (
             self.calculate_move_effectiveness(move, defender, attacker)
             * self.calculate_stab_multiplier(attacker, move)
             * self.calculate_critical_hit_multiplier(attacker, defender, move)
         )
+        if (
+            self.terrain is Terrain.GRASSY
+            and self._is_grounded(attacker)
+            and move.get_type(attacker, defender, self) is Type.GRASS
+        ):
+            modifiers *= 1.3
+        return modifiers
+
+    def _is_grounded(self, pokemon):
+        """Return whether a Pokémon is grounded for terrain interactions."""
+        return self.gravity_active or Type.FLYING not in pokemon.type
 
     def calculate_damage(self, attacker, defender, move):
         """Calculate damage from battle stats, move power, type, and move effects.
@@ -665,7 +722,11 @@ class Field:
         if not self.attack_hits(attacker, defender, move):
             return {"hit": False, "immune": False, "damage": 0, "effect": None, "hits": 0}
 
-        if not move.targets_user_team() and self.is_immune_to_move(move, defender, attacker):
+        if (
+            not move.targets_user_team()
+            and not move.applies_field_effect()
+            and self.is_immune_to_move(move, defender, attacker)
+        ):
             return {"hit": True, "immune": True, "damage": 0, "effect": None, "hits": 0}
 
         attacker.calculateStats()
@@ -682,7 +743,9 @@ class Field:
             defender.current_hp = max(0, defender.current_hp - hit_damage)
             hits += 1
 
-        if move.targets_user_team():
+        if move.applies_field_effect():
+            effect = move.apply_field_effect(attacker, self)
+        elif move.targets_user_team():
             effect = move.apply_team_effect(attacker, self._get_team(side))
         else:
             effect = move.apply_effect(attacker, defender, damage_dealt)

@@ -138,6 +138,13 @@ def _display_action_result(battle_field, action, result):
             print(f"L'effet de Sirotage prend fin pour {action['pokemon'].name}.")
         return
 
+    if action["type"] == "grassy_terrain_residual":
+        print(
+            f"Champ Herbu restaure {result['healed']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        return
+
     if result.get("charging"):
         print(f"{action['pokemon'].name} concentre la lumière pour {action['move'].name}.")
         return
@@ -168,7 +175,12 @@ def _display_action_result(battle_field, action, result):
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
     else:
         effect = result["effect"]
-        if effect and effect.get("condition") == "aromatherapy":
+        if effect and effect.get("condition") == "grassy_terrain":
+            print(
+                f"{action['pokemon'].name} utilise Champ Herbu. "
+                f"Le terrain restera actif pendant {effect['turns']} tours."
+            )
+        elif effect and effect.get("condition") == "aromatherapy":
             print(f"{action['pokemon'].name} utilise Aromathérapie.")
             if effect["cured"]:
                 print(

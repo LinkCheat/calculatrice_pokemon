@@ -70,6 +70,16 @@ class Moves(ABC):
             f"{self.name} does not implement an effect on the user's team."
         )
 
+    def applies_field_effect(self):
+        """Return whether this move changes the battle field itself."""
+        return False
+
+    def apply_field_effect(self, user, field):
+        """Apply this move's effect to the battle field when supported."""
+        raise NotImplementedError(
+            f"{self.name} does not implement a field effect."
+        )
+
     def use(self, user, target):
         """Consume one PP and apply the move's effect to its target."""
         self.consume_pp()
