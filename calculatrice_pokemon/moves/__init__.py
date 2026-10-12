@@ -43,5 +43,6 @@ from .grass.absorb import Absorb
 from .grass.aromatherapy import Aromatherapy
 from .grass.grassy_terrain import GrassyTerrain
 from .grass.cotton_guard import CottonGuard
+from .grass.growth import Growth
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid", "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf", "SeedFlare", "GigaDrain", "Chloroblast", "SolarBeam", "MegaDrain", "MatchaGotcha", "GrassKnot", "LeafTornado", "LeafStorm", "FrenzyPlant", "Absorb", "Aromatherapy", "GrassyTerrain", "CottonGuard"]
+__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid", "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf", "SeedFlare", "GigaDrain", "Chloroblast", "SolarBeam", "MegaDrain", "MatchaGotcha", "GrassKnot", "LeafTornado", "LeafStorm", "FrenzyPlant", "Absorb", "Aromatherapy", "GrassyTerrain", "CottonGuard", "Growth"]

@@ -218,17 +218,24 @@ def _display_action_result(battle_field, action, result):
             if target_pokemon.current_hp == 0:
                 print(f"{target_pokemon.name} est K.O.")
 
-            if effect and effect.get("stat") in (
-                "attack",
-                "defense",
-                "sp_atk",
-                "sp_def",
-                "speed",
-                "accuracy",
-            ):
+            stat_changes = (
+                effect.get("stat_changes")
+                if effect and "stat_changes" in effect
+                else [effect] if effect and effect.get("stat") else []
+            )
+            for stat_change in stat_changes:
+                if stat_change.get("stat") not in (
+                    "attack",
+                    "defense",
+                    "sp_atk",
+                    "sp_def",
+                    "speed",
+                    "accuracy",
+                ):
+                    continue
                 recipient = (
                     action["pokemon"]
-                    if effect.get("recipient") == "user"
+                    if stat_change.get("recipient") == "user"
                     else target_pokemon
                 )
                 stat_name = {
@@ -238,17 +245,21 @@ def _display_action_result(battle_field, action, result):
                     "sp_def": "La Défense Spéciale",
                     "speed": "La Vitesse",
                     "accuracy": "La Précision",
-                }[effect["stat"]]
-                if effect["applied"]:
-                    change = "augmente" if effect["stages"] > 0 else "baisse"
-                    stage_count = abs(effect["stages"])
+                }[stat_change["stat"]]
+                if stat_change["applied"]:
+                    change = "augmente" if stat_change["stages"] > 0 else "baisse"
+                    stage_count = abs(stat_change["stages"])
                     if stage_count == 1:
                         amount = "d'un cran"
                     else:
                         amount = f"de {stage_count} crans"
                     print(f"{stat_name} de {recipient.name} {change} {amount}.")
                 else:
-                    limit = "augmenter" if effect.get("recipient") == "user" else "baisser"
+                    limit = (
+                        "augmenter"
+                        if stat_change.get("recipient") == "user"
+                        else "baisser"
+                    )
                     print(f"{stat_name} de {recipient.name} ne peut pas {limit} davantage.")
             if effect and "healed" in effect:
                 print(

@@ -60,6 +60,10 @@ class Moves(ABC):
         """Apply this move's effect after damage has been dealt."""
         return self.effect(user, target)
 
+    def apply_effect_with_field(self, user, target, damage_dealt, field):
+        """Apply this move's effect with field context when required."""
+        return self.apply_effect(user, target, damage_dealt)
+
     def targets_user_team(self):
         """Return whether this move applies its effect to the user's team."""
         return False

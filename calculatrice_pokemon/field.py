@@ -748,7 +748,12 @@ class Field:
         elif move.targets_user_team():
             effect = move.apply_team_effect(attacker, self._get_team(side))
         else:
-            effect = move.apply_effect(attacker, defender, damage_dealt)
+            effect = move.apply_effect_with_field(
+                attacker,
+                defender,
+                damage_dealt,
+                self,
+            )
         if move.requires_recharge_after_use():
             attacker.recharging_move = move
         return {
