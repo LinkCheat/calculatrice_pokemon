@@ -189,6 +189,11 @@ def _display_action_result(battle_field, action, result):
                 )
             else:
                 print("Aucun problème de statut à soigner dans l'équipe.")
+        elif effect and effect.get("condition") == "forest_curse":
+            if effect["applied"]:
+                print(f"{target_pokemon.name} reçoit le type Plante.")
+            else:
+                print(f"{target_pokemon.name} est déjà de type Plante.")
         elif effect and "status" in effect:
             if effect["applied"]:
                 if effect["status"] is STATUS_CONDITION.BURN:

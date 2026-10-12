@@ -84,6 +84,9 @@ class Field:
         for pokemon in self._player_team + self._opponent_team:
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
+            if pokemon.forest_cursed:
+                pokemon.type.remove(Type.GRASS)
+                pokemon.forest_cursed = False
             pokemon.charging_move = None
             pokemon.recharging_move = None
             pokemon.locked_move = None
@@ -131,6 +134,9 @@ class Field:
             outgoing_pokemon.locked_move = None
             outgoing_pokemon.locked_move_turns_remaining = 0
             outgoing_pokemon.confusion_turns_remaining = 0
+            if outgoing_pokemon.forest_cursed:
+                outgoing_pokemon.type.remove(Type.GRASS)
+                outgoing_pokemon.forest_cursed = False
         self._set_active_index(side, team_index)
         return team[team_index]
 

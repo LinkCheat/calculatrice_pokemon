@@ -20,6 +20,7 @@ class Pokemon:
         self.name = data["name"]
         self.form = data["form"]
         self.type = data["type"]
+        self.forest_cursed = False
         self.base_stats = data["stats"]
         self.weight = data["weight"]
 
