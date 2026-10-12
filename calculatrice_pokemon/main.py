@@ -1,6 +1,7 @@
 
 try:
     from enums.nature import Nature
+    from enums.status_condition import STATUS_CONDITION
     from enums.type import Type
     from moves import *
     import field
@@ -8,6 +9,7 @@ try:
     import moves.move as move
 except ModuleNotFoundError:
     from calculatrice_pokemon.enums.nature import Nature
+    from calculatrice_pokemon.enums.status_condition import STATUS_CONDITION
     from calculatrice_pokemon.enums.type import Type
     from calculatrice_pokemon.moves import *
     import calculatrice_pokemon.field as field
@@ -160,12 +162,19 @@ def _display_action_result(battle_field, action, result):
         effect = result["effect"]
         if effect and "status" in effect:
             if effect["applied"]:
-                sleep_turns = effect["sleep_turns"]
-                duration_label = "tour" if sleep_turns == 1 else "tours"
-                print(
-                    f"{target_pokemon.name} s'endort pour "
-                    f"{sleep_turns} {duration_label}."
-                )
+                if effect["status"] is STATUS_CONDITION.BURN:
+                    print(f"{target_pokemon.name} est brûlé.")
+                else:
+                    sleep_turns = effect["sleep_turns"]
+                    duration_label = "tour" if sleep_turns == 1 else "tours"
+                    print(
+                        f"{target_pokemon.name} s'endort pour "
+                        f"{sleep_turns} {duration_label}."
+                    )
+            elif effect.get("reason") == "chance_failed":
+                print(f"{target_pokemon.name} échappe à la brûlure.")
+            elif effect.get("reason") == "type_immune":
+                print(f"{target_pokemon.name} ne peut pas être brûlé.")
             else:
                 print(f"{target_pokemon.name} est déjà affecté par un statut.")
         else:
