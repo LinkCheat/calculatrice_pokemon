@@ -2,10 +2,3 @@ On met directement dedans tout ce qu'on a pas pu donner à l'IA car les mécanis
 
 #Attaques dépendants des objets
 
-#Attaques dépendants des talents
-Worry Seed : https://www.pokepedia.fr/Soucigraine
-
-
-#Dépend d'autres attaques
-
-Pour la confusion : Cependant, un Pokémon endormi peut se blesser dans sa confusion s'il utilise une capacité comme Ronflement ou Blabla Dodo. Les capacités en deux tours comme Vol ou Plongée requièrent que la confusion soit testée aux deux tours, ce qui réduit les chances de réussir la capacité.

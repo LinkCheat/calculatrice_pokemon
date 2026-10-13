@@ -15,10 +15,11 @@ from .spore import Spore
 from .strength_sap import StrengthSap
 from .stun_spore import StunSpore
 from .synthesis import Synthesis
+from .worry_seed import WorrySeed
 
 __all__ = [
     "Aromatherapy", "CottonGuard", "CottonSpore", "ForestCurse",
     "GrassWhistle", "GrassyTerrain", "Growth", "Ingrain", "JungleHealing",
     "LeechSeed", "SleepPowder", "SpicyExtract", "SpikyShield", "Spore",
-    "StrengthSap", "StunSpore", "Synthesis",
+    "StrengthSap", "StunSpore", "Synthesis", "WorrySeed",
 ]
