@@ -1,6 +1,7 @@
 import math
 import random
 
+from enums.ability import Ability
 from enums.weather import Weather
 from enums.terrain import Terrain
 from enums.move_category import MoveCategory
@@ -102,6 +103,9 @@ class Field:
             pokemon.flinched = False
             pokemon.has_acted_this_turn = False
 
+        self._activate_entry_ability("player")
+        self._activate_entry_ability("opponent")
+
     def switch_pokemon(self, side, team_index):
         """Make a team member active and return it.
 
@@ -149,8 +153,29 @@ class Field:
             if outgoing_pokemon.forest_cursed:
                 outgoing_pokemon.type.remove(Type.GRASS)
                 outgoing_pokemon.forest_cursed = False
+            for stat_name in outgoing_pokemon.stat_modifiers:
+                outgoing_pokemon.stat_modifiers[stat_name] = 0
         self._set_active_index(side, team_index)
+        self._activate_entry_ability(side)
         return team[team_index]
+
+    def _activate_entry_ability(self, side):
+        """Apply the active Pokémon's ability effects that trigger on entry."""
+        pokemon = self._get_active_pokemon(side)
+        opposing_side = "opponent" if side == "player" else "player"
+        opposing_pokemon = self._get_active_pokemon(opposing_side)
+
+        if (
+            pokemon is None
+            or opposing_pokemon is None
+            or opposing_pokemon.current_hp <= 0
+        ):
+            return
+
+        if pokemon.ability is Ability.INTIMIDATION:
+            attack_stage = opposing_pokemon.stat_modifiers["attack"]
+            if attack_stage > -6:
+                opposing_pokemon.stat_modifiers["attack"] = attack_stage - 1
 
     def _get_team(self, side):
         """Return the mutable team list for a side; reject unknown side names."""

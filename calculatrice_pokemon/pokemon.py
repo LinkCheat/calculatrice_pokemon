@@ -2,6 +2,7 @@ import csv
 import math
 from pathlib import Path
 
+from enums.ability import Ability
 from enums.type import Type
 from enums.nature import Nature
 from enums.status_condition import STATUS_CONDITION
@@ -35,7 +36,7 @@ class Pokemon:
             "speed": 0,
         }
         self.nature = Nature.HARDY
-        self.ability = None
+        self.ability = Ability.NONE
         self.item = None
         self.moves = []
 
