@@ -60,6 +60,7 @@ from .grass.status import (
     StrengthSap,
     StunSpore,
     Synthesis,
+    WorrySeed,
 )
 
 __all__ = [
@@ -74,5 +75,5 @@ __all__ = [
     "Absorb", "Aromatherapy", "GrassyTerrain", "CottonGuard", "Growth",
     "SpicyExtract", "ForestCurse", "StunSpore", "SpikyShield", "SleepPowder",
     "Ingrain", "JungleHealing", "GrassWhistle", "CottonSpore", "Synthesis",
-    "StrengthSap",
+    "StrengthSap", "WorrySeed",
 ]

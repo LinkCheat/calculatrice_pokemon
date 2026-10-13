@@ -37,6 +37,7 @@ class Pokemon:
         }
         self.nature = Nature.HARDY
         self.ability = Ability.NONE
+        self._ability_before_temporary_override = None
         self.item = None
         self.moves = []
 
@@ -106,6 +107,25 @@ class Pokemon:
 
         move.pp = move.max_pp
         self.moves.append(move)
+
+    def set_temporary_ability(self, ability):
+        """Temporarily replace this Pokémon's ability until it leaves the field."""
+        if not isinstance(ability, Ability):
+            raise ValueError("ability doit être une valeur de Ability.")
+        if self.ability is ability:
+            return False
+        if self._ability_before_temporary_override is None:
+            self._ability_before_temporary_override = self.ability
+        self.ability = ability
+        return True
+
+    def restore_temporary_ability(self):
+        """Restore the ability saved before a temporary ability replacement."""
+        if self._ability_before_temporary_override is None:
+            return False
+        self.ability = self._ability_before_temporary_override
+        self._ability_before_temporary_override = None
+        return True
 
 
     @staticmethod

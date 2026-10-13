@@ -83,6 +83,7 @@ class Field:
     def initialize_battle(self):
         """Recalculate every team member's stats and restore each one's HP."""
         for pokemon in self._player_team + self._opponent_team:
+            pokemon.restore_temporary_ability()
             pokemon.calculateStats()
             pokemon.current_hp = pokemon.max_hp
             if pokemon.forest_cursed:
@@ -153,6 +154,7 @@ class Field:
             if outgoing_pokemon.forest_cursed:
                 outgoing_pokemon.type.remove(Type.GRASS)
                 outgoing_pokemon.forest_cursed = False
+            outgoing_pokemon.restore_temporary_ability()
             for stat_name in outgoing_pokemon.stat_modifiers:
                 outgoing_pokemon.stat_modifiers[stat_name] = 0
         self._set_active_index(side, team_index)
@@ -762,20 +764,24 @@ class Field:
                 "flinched": True,
             }
         if attacker.status_condition is STATUS_CONDITION.SLEEP:
-            fail_protection_streak()
-            if attacker.charging_move is move:
-                attacker.charging_move = None
-            attacker.sleep_turns_remaining -= 1
-            if attacker.sleep_turns_remaining <= 0:
-                attacker.sleep_turns_remaining = 0
+            if attacker.ability is Ability.INSOMNIA:
                 attacker.status_condition = None
-            return {
-                "hit": False,
-                "immune": False,
-                "damage": 0,
-                "effect": None,
-                "unable_to_act": True,
-            }
+                attacker.sleep_turns_remaining = 0
+            else:
+                fail_protection_streak()
+                if attacker.charging_move is move:
+                    attacker.charging_move = None
+                attacker.sleep_turns_remaining -= 1
+                if attacker.sleep_turns_remaining <= 0:
+                    attacker.sleep_turns_remaining = 0
+                    attacker.status_condition = None
+                return {
+                    "hit": False,
+                    "immune": False,
+                    "damage": 0,
+                    "effect": None,
+                    "unable_to_act": True,
+                }
         if (
             attacker.status_condition is STATUS_CONDITION.PARALYSIS
             and random.random() < 0.25

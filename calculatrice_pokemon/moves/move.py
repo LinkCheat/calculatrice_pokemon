@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 import random
 
 try:
+    from enums.ability import Ability
     from enums.type import Type
     from enums.move_category import MoveCategory
     from enums.status_condition import STATUS_CONDITION
 except ModuleNotFoundError:
+    from calculatrice_pokemon.enums.ability import Ability
     from calculatrice_pokemon.enums.type import Type
     from calculatrice_pokemon.enums.move_category import MoveCategory
     from calculatrice_pokemon.enums.status_condition import STATUS_CONDITION
@@ -146,6 +147,14 @@ class Moves(ABC):
 
     def inflict_sleep(self, target):
         """Put an unstatused target to sleep for one to three turns."""
+        if target.ability is Ability.INSOMNIA:
+            return {
+                "name": self.name,
+                "status": None,
+                "applied": False,
+                "reason": "ability_immune",
+                "ability": Ability.INSOMNIA,
+            }
         if target.status_condition is not None:
             return {
                 "name": self.name,
