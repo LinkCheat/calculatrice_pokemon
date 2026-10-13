@@ -1,0 +1,1 @@
+"""Stellar-type moves."""

@@ -1,0 +1,1 @@
+"""Psychic-type moves."""

@@ -1,0 +1,1 @@
+"""Flying-type moves."""

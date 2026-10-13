@@ -899,13 +899,16 @@ class Field:
             )
         if move.requires_recharge_after_use():
             attacker.recharging_move = move
-        return {
+        result = {
             "hit": True,
             "immune": False,
             "damage": damage,
             "effect": effect,
             "hits": hits,
         }
+        if effect and effect.get("failed"):
+            result["failed"] = True
+        return result
 
     def calculate_confusion_damage(self, pokemon):
         """Calculate physical typeless self-damage without a critical hit."""
