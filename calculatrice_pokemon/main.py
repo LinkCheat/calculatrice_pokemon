@@ -204,6 +204,8 @@ def _display_action_result(battle_field, action, result):
         print(f"{action['pokemon'].name} rate {action['move'].name}.")
     elif result["immune"]:
         print(f"{target_pokemon.name} est immunisé à {action['move'].name}.")
+    elif result.get("failed"):
+        print(f"{action['pokemon'].name} échoue à utiliser {action['move'].name}.")
     else:
         effect = result["effect"]
         if effect and effect.get("condition") == "ingrain":
@@ -226,6 +228,12 @@ def _display_action_result(battle_field, action, result):
                 )
             else:
                 print(f"{action['pokemon'].name} ne récupère aucun PV.")
+        elif effect and effect.get("condition") == "strength_sap":
+            print(
+                f"{action['pokemon'].name} récupère "
+                f"{effect['healed']} PV grâce à Vole-Force."
+            )
+            print(f"L'Attaque de {target_pokemon.name} baisse d'un cran.")
         elif effect and effect.get("condition") == "grassy_terrain":
             print(
                 f"{action['pokemon'].name} utilise Champ Herbu. "
