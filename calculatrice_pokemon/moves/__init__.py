@@ -1,59 +1,78 @@
-from .normal.tackle import Tackle
-from .grass.spore import Spore
-from .grass.bullet_seed import BulletSeed
-from .grass.trop_kick import TropKick
-from .grass.seed_bomb import SeedBomb
-from .grass.trailblaze import Trailblaze
-from .grass.horn_leech import HornLeech
-from .grass.leech_seed import LeechSeed
-from .grass.sappy_seed import SappySeed
-from .grass.leafage import Leafage
-from .grass.grav_apple import GravApple
-from .grass.vine_whip import VineWhip
-from .grass.grassy_glide import GrassyGlide
-from .grass.leaf_blade import LeafBlade
-from .grass.solar_blade import SolarBlade
-from .grass.flower_trick import FlowerTrick
-from .grass.wood_hammer import WoodHammer
-from .grass.ivy_cudgel import IvyCudgel
-from .grass.power_whip import PowerWhip
-from .grass.needle_arm import NeedleArm
-from .grass.drum_beating import DrumBeating
-from .grass.branch_poke import BranchPoke
-from .grass.petal_blizzard import PetalBlizzard
-from .grass.razor_leaf import RazorLeaf
-from .grass.snap_trap import SnapTrap
-from .grass.apple_acid import AppleAcid
-from .grass.grass_pledge import GrassPledge
-from .grass.syrup_bomb import SyrupBomb
-from .grass.petal_dance import PetalDance
-from .grass.energy_ball import EnergyBall
-from .grass.magical_leaf import MagicalLeaf
-from .grass.seed_flare import SeedFlare
-from .grass.giga_drain import GigaDrain
-from .grass.chloroblast import Chloroblast
-from .grass.solar_beam import SolarBeam
-from .grass.mega_drain import MegaDrain
-from .grass.matcha_gotcha import MatchaGotcha
-from .grass.grass_knot import GrassKnot
-from .grass.leaf_tornado import LeafTornado
-from .grass.leaf_storm import LeafStorm
-from .grass.frenzy_plant import FrenzyPlant
-from .grass.absorb import Absorb
-from .grass.aromatherapy import Aromatherapy
-from .grass.grassy_terrain import GrassyTerrain
-from .grass.cotton_guard import CottonGuard
-from .grass.growth import Growth
-from .grass.spicy_extract import SpicyExtract
-from .grass.forest_curse import ForestCurse
-from .grass.stun_spore import StunSpore
-from .grass.spiky_shield import SpikyShield
-from .grass.sleep_powder import SleepPowder
-from .grass.ingrain import Ingrain
-from .grass.jungle_healing import JungleHealing
-from .grass.grass_whistle import GrassWhistle
-from .grass.cotton_spore import CottonSpore
-from .grass.synthesis import Synthesis
-from .grass.strength_sap import StrengthSap
+from .normal.physical import Tackle
+from .grass.physical import (
+    BranchPoke,
+    BulletSeed,
+    DrumBeating,
+    FlowerTrick,
+    GrassyGlide,
+    GravApple,
+    HornLeech,
+    IvyCudgel,
+    LeafBlade,
+    Leafage,
+    NeedleArm,
+    PetalBlizzard,
+    PowerWhip,
+    RazorLeaf,
+    SappySeed,
+    SeedBomb,
+    SnapTrap,
+    SolarBlade,
+    Trailblaze,
+    TropKick,
+    VineWhip,
+    WoodHammer,
+)
+from .grass.special import (
+    Absorb,
+    AppleAcid,
+    Chloroblast,
+    EnergyBall,
+    FrenzyPlant,
+    GigaDrain,
+    GrassKnot,
+    GrassPledge,
+    LeafStorm,
+    LeafTornado,
+    MagicalLeaf,
+    MatchaGotcha,
+    MegaDrain,
+    PetalDance,
+    SeedFlare,
+    SolarBeam,
+    SyrupBomb,
+)
+from .grass.status import (
+    Aromatherapy,
+    CottonGuard,
+    CottonSpore,
+    ForestCurse,
+    GrassWhistle,
+    GrassyTerrain,
+    Growth,
+    Ingrain,
+    JungleHealing,
+    LeechSeed,
+    SleepPowder,
+    SpicyExtract,
+    SpikyShield,
+    Spore,
+    StrengthSap,
+    StunSpore,
+    Synthesis,
+)
 
-__all__ = ["Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze", "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple", "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick", "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating", "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid", "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf", "SeedFlare", "GigaDrain", "Chloroblast", "SolarBeam", "MegaDrain", "MatchaGotcha", "GrassKnot", "LeafTornado", "LeafStorm", "FrenzyPlant", "Absorb", "Aromatherapy", "GrassyTerrain", "CottonGuard", "Growth", "SpicyExtract", "ForestCurse", "StunSpore", "SpikyShield", "SleepPowder", "Ingrain", "JungleHealing", "GrassWhistle", "CottonSpore", "Synthesis", "StrengthSap"]
+__all__ = [
+    "Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze",
+    "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple",
+    "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick",
+    "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating",
+    "BranchPoke", "PetalBlizzard", "RazorLeaf", "SnapTrap", "AppleAcid",
+    "GrassPledge", "SyrupBomb", "PetalDance", "EnergyBall", "MagicalLeaf",
+    "SeedFlare", "GigaDrain", "Chloroblast", "SolarBeam", "MegaDrain",
+    "MatchaGotcha", "GrassKnot", "LeafTornado", "LeafStorm", "FrenzyPlant",
+    "Absorb", "Aromatherapy", "GrassyTerrain", "CottonGuard", "Growth",
+    "SpicyExtract", "ForestCurse", "StunSpore", "SpikyShield", "SleepPowder",
+    "Ingrain", "JungleHealing", "GrassWhistle", "CottonSpore", "Synthesis",
+    "StrengthSap",
+]
