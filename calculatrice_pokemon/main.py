@@ -218,6 +218,14 @@ def _display_action_result(battle_field, action, result):
                 print(f"{action['pokemon'].name} ne récupère aucun PV.")
             if effect["cured"]:
                 print(f"Les altérations de statut de {action['pokemon'].name} sont soignées.")
+        elif effect and effect.get("condition") == "synthesis":
+            if effect["healed"]:
+                print(
+                    f"{action['pokemon'].name} récupère "
+                    f"{effect['healed']} PV grâce à Synthèse."
+                )
+            else:
+                print(f"{action['pokemon'].name} ne récupère aucun PV.")
         elif effect and effect.get("condition") == "grassy_terrain":
             print(
                 f"{action['pokemon'].name} utilise Champ Herbu. "
