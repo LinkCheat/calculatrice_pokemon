@@ -3,6 +3,8 @@ On met directement dedans tout ce qu'on a pas pu donner à l'IA car les mécanis
 #Attaques dépendants des objets
 
 #Attaques dépendants des talents
+Worry Seed : https://www.pokepedia.fr/Soucigraine
+
 
 #Dépend d'autres attaques
 
