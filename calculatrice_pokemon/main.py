@@ -135,6 +135,28 @@ def _display_action_result(battle_field, action, result):
             print(f"{action['pokemon'].name} est K.O.")
         return
 
+    if action["type"] == "fire_spin_residual":
+        print(
+            f"Danse Flammes retire {result['damage']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        if result["turns_remaining"] == 0:
+            print(f"{action['pokemon'].name} n'est plus piégé par Danse Flammes.")
+        if action["pokemon"].current_hp == 0:
+            print(f"{action['pokemon'].name} est K.O.")
+        return
+
+    if action["type"] == "magma_storm_residual":
+        print(
+            f"Vortex Magma retire {result['damage']} PV à "
+            f"{action['pokemon'].name}."
+        )
+        if result["turns_remaining"] == 0:
+            print(f"{action['pokemon'].name} n'est plus piégé par Vortex Magma.")
+        if action["pokemon"].current_hp == 0:
+            print(f"{action['pokemon'].name} est K.O.")
+        return
+
     if action["type"] == "syrup_bomb_residual":
         if result["applied"]:
             print(f"La Vitesse de {action['pokemon'].name} baisse d'un cran (Sirotage).")
@@ -156,6 +178,11 @@ def _display_action_result(battle_field, action, result):
             f"Champ Herbu restaure {result['healed']} PV à "
             f"{action['pokemon'].name}."
         )
+        return
+
+    if action["type"] == "weather_residual":
+        if result["ended"]:
+            print("Le soleil ne brille plus.")
         return
 
     if result.get("charging"):
@@ -196,6 +223,14 @@ def _display_action_result(battle_field, action, result):
             )
             if action["pokemon"].current_hp == 0:
                 print(f"{action['pokemon'].name} est K.O.")
+        else:
+            effect = result.get("effect")
+            if (
+                effect is not None
+                and effect.get("applied")
+                and effect.get("status") is STATUS_CONDITION.BURN
+            ):
+                print(f"{action['pokemon'].name} est brûlé.")
     elif result.get("protection_failed"):
         print(f"{action['pokemon'].name} échoue à utiliser {action['move'].name}.")
     elif result.get("fainted"):
@@ -239,6 +274,11 @@ def _display_action_result(battle_field, action, result):
                 f"{action['pokemon'].name} utilise Champ Herbu. "
                 f"Le terrain restera actif pendant {effect['turns']} tours."
             )
+        elif effect and effect.get("condition") == "sunny_day":
+            print(
+                f"{action['pokemon'].name} utilise Zénith. "
+                f"Le soleil brillera pendant {effect['turns']} tours."
+            )
         elif effect and effect.get("condition") == "aromatherapy":
             print(f"{action['pokemon'].name} utilise Aromathérapie.")
             if effect["cured"]:
@@ -272,6 +312,8 @@ def _display_action_result(battle_field, action, result):
                 print(f"{target_pokemon.name} ne peut pas être brûlé.")
             else:
                 print(f"{target_pokemon.name} est déjà affecté par un statut.")
+            if effect.get("flinched"):
+                print(f"{target_pokemon.name} est apeuré.")
         else:
             hit_count = result.get("hits", 1)
             hit_description = f"et touche {hit_count} fois " if hit_count > 1 else ""
@@ -361,6 +403,32 @@ def _display_action_result(battle_field, action, result):
                     )
                 elif effect["reason"] == "target_fainted":
                     print(f"{target_pokemon.name} est K.O. et ne peut pas être piégé.")
+            if effect and effect.get("condition") == "fire_spin":
+                if effect["applied"]:
+                    print(
+                        f"{target_pokemon.name} est piégé par Danse Flammes "
+                        f"pour {effect['turns']} tours."
+                    )
+                elif effect["reason"] == "ghost_immune":
+                    print(
+                        f"{target_pokemon.name} échappe au piège de Danse Flammes."
+                    )
+                elif effect["reason"] == "target_fainted":
+                    print(
+                        f"{target_pokemon.name} est K.O. et ne peut pas être piégé."
+                    )
+            if effect and effect.get("condition") == "magma_storm":
+                if effect["applied"]:
+                    print(
+                        f"{target_pokemon.name} est piégé par Vortex Magma "
+                        f"pour {effect['turns']} tours."
+                    )
+                elif effect["reason"] == "ghost_immune":
+                    print(f"{target_pokemon.name} échappe au piège de Vortex Magma.")
+                elif effect["reason"] == "target_fainted":
+                    print(
+                        f"{target_pokemon.name} est K.O. et ne peut pas être piégé."
+                    )
             if effect and effect.get("condition") == "syrupy":
                 if effect["applied"]:
                     print(

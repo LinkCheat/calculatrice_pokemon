@@ -1,4 +1,50 @@
 from .normal.physical import Tackle
+from .fire.physical import (
+    BlazeKick,
+    BlazingTorque,
+    BitterBlade,
+    FireFang,
+    FireLash,
+    FirePunch,
+    FlareBlitz,
+    FlameCharge,
+    FlameWheel,
+    HeatCrash,
+    PyroBall,
+    RagingFury,
+    SacredFire,
+    SizzlySlide,
+    TemperFlare,
+    VCreate,
+)
+from .fire.special import (
+    ArmorCannon,
+    BlueFlare,
+    BlastBurn,
+    BurnUp,
+    BurningJealousy,
+    Ember,
+    Eruption,
+    FirePledge,
+    FieryDance,
+    FlameBurst,
+    FireBlast,
+    FireSpin,
+    Flamethrower,
+    FusionFlare,
+    HeatWave,
+    Incinerate,
+    Inferno,
+    LavaPlume,
+    MagmaStorm,
+    MindBlown,
+    MysticalFire,
+    Overheat,
+    SearingShot,
+    ShellTrap,
+    TorchSong,
+)
+from .fire.status import BurningBulwark, SunnyDay, WillOWisp
 from .grass.physical import (
     BranchPoke,
     BulletSeed,
@@ -64,7 +110,7 @@ from .grass.status import (
 )
 
 __all__ = [
-    "Tackle", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze",
+    "Tackle", "ArmorCannon", "BlueFlare", "BlastBurn", "BurnUp", "BurningBulwark", "BurningJealousy", "Ember", "Eruption", "FirePledge", "FieryDance", "FlameBurst", "FireBlast", "FireSpin", "Flamethrower", "FusionFlare", "HeatWave", "Incinerate", "Inferno", "LavaPlume", "MagmaStorm", "MindBlown", "MysticalFire", "Overheat", "SearingShot", "ShellTrap", "TorchSong", "SunnyDay", "WillOWisp", "BitterBlade", "BlazeKick", "BlazingTorque", "FireFang", "FireLash", "FirePunch", "FlareBlitz", "FlameCharge", "FlameWheel", "HeatCrash", "PyroBall", "RagingFury", "SacredFire", "SizzlySlide", "TemperFlare", "VCreate", "Spore", "BulletSeed", "TropKick", "SeedBomb", "Trailblaze",
     "HornLeech", "LeechSeed", "SappySeed", "Leafage", "GravApple",
     "VineWhip", "GrassyGlide", "LeafBlade", "SolarBlade", "FlowerTrick",
     "WoodHammer", "IvyCudgel", "PowerWhip", "NeedleArm", "DrumBeating",

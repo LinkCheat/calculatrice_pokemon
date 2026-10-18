@@ -22,6 +22,7 @@ class Pokemon:
         self.name = data["name"]
         self.form = data["form"]
         self.type = data["type"]
+        self.burn_up_original_types = None
         self.forest_cursed = False
         self.base_stats = data["stats"]
         self.weight = data["weight"]
@@ -62,18 +63,26 @@ class Pokemon:
         self.sleep_turns_remaining = 0
         self.charging_move = None
         self.recharging_move = None
+        self.last_move_failed = False
         self.protected_this_turn = False
+        self.protected_by_move = None
         self.protection_streak = 0
+        self.shell_trap_armed = False
+        self.shell_trap_triggered = False
         self.locked_move = None
         self.locked_move_turns_remaining = 0
         self.confusion_turns_remaining = 0
         self.leech_seeded = False
         self.ingrain_active = False
         self.snap_trap_turns_remaining = 0
+        self.fire_spin_turns_remaining = 0
+        self.magma_storm_turns_remaining = 0
+        self.magma_storm_trapped_by = None
         self.syrupy_turns_remaining = 0
         self.syrupy_skip_next_tick = False
         self.flinched = False
         self.has_acted_this_turn = False
+        self.stat_boosted_this_turn = False
         self.stat_modifiers = {
             "attack": 0,
             "defense": 0,
@@ -127,6 +136,14 @@ class Pokemon:
         self._ability_before_temporary_override = None
         return True
 
+
+    def restore_burn_up_type(self):
+        """Restore the type removed by Burn Up, if the Pokémon used it."""
+        if self.burn_up_original_types is None:
+            return False
+        self.type = list(self.burn_up_original_types)
+        self.burn_up_original_types = None
+        return True
 
     @staticmethod
     def _parse_type(type_name):
